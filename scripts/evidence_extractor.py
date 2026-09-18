@@ -75,6 +75,9 @@ class PaperEvidence:
     quality_total: int  # 0-8 (sum of above)
     quality_rationale: str
 
+    # Causal claims (NEW)
+    causal_claims: list  # See causal_claim_template() for structure
+
     # Connection to QIPS
     will_adopt: list  # Formulas/methods we'll take
     will_adapt: list  # Ideas we'll modify
@@ -86,6 +89,33 @@ class PaperEvidence:
     def to_dict(self):
         """Convert to JSON-serializable dict."""
         return asdict(self)
+
+
+def create_causal_claim_template() -> dict:
+    """Template for a single causal claim extracted from a paper."""
+    return {
+        "claim_id": "claim_0001",
+        "cause": "",  # Variable name
+        "effect": "",  # Variable name
+        "mechanism": "",  # How cause leads to effect
+        "direction": "",  # "increases" | "decreases" | "enables" | "prevents"
+        "conditions": {},  # Under what conditions (e.g., {"dimension": ">30"})
+        "evidence_type": "",  # observational_benchmark | controlled_experiment | etc
+        "source": {
+            "paper_id": "",
+            "section": "",
+            "page": None,
+            "quote": "",
+        },
+        "causal_status": "reported",  # reported | inferred | proposed | disputed
+        "extraction_method": "claude_with_human_verification",
+        "review_status": "pending",  # pending | accepted | rejected | requires_experiment
+        "extraction_confidence": "medium",  # high | medium | low
+        "evidence_confidence": "medium",
+        "causal_confidence": "medium",  # Separate from evidence confidence
+        "mechanism_confidence": "medium",
+        "alternative_explanations": [],  # Other possible causes
+    }
 
 
 def create_template_evidence() -> dict:
@@ -125,6 +155,7 @@ def create_template_evidence() -> dict:
         "rq5_scalability_trend": "",
         "rq5_d_performance": {},
         "rq5_quote": "",
+        "causal_claims": [],  # List of causal_claim_template() objects filled by Claude
         "quality_algorithm_clarity": 0,
         "quality_benchmark_rigor": 0,
         "quality_relevance_rqs": 0,
@@ -153,13 +184,18 @@ def main():
     parser = argparse.ArgumentParser(
         description="Extract evidence from paper (Claude reads PDF in session)"
     )
-    parser.add_argument("--template", action="store_true", help="Show empty template")
+    parser.add_argument("--template", action="store_true", help="Show empty evidence template")
+    parser.add_argument("--causal-template", action="store_true", help="Show causal claim template")
     parser.add_argument("--output", type=Path, default=Path("automation/extracted_evidence"))
 
     args = parser.parse_args()
 
     if args.template:
         print(json.dumps(create_template_evidence(), indent=2))
+        return
+
+    if args.causal_template:
+        print(json.dumps(create_causal_claim_template(), indent=2))
         return
 
     print("📐 Evidence Extractor")

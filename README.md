@@ -14,21 +14,58 @@ This repo generates structured **testable hypotheses** from automated literature
 
 ## Architecture
 
+### Three-Track Pipeline
+
+**Track A: Research Questions (RQs)**
+```
+Evidence extraction → Evidence matrix → Hypothesis export
+(scripts/evidence_synthesis.py + hypothesis_exporter.py)
+```
+
+**Track B: Causal Modeling (NEW)**
+```
+Extracted causal claims → Causal graph → Human validation → Experiment specs
+(scripts/causal_graph_builder.py + experiment_spec_compiler.py)
+```
+
+**Track C: Synthesis**
+```
+Both tracks converge → membrane repo
+(hypotheses.json + experiment_specs.json)
+```
+
+Complete flow:
+
 ```
 Papers (PDF)
     ↓
-scripts/evidence_extractor.py (Claude reads, fills template)
+scripts/evidence_extractor.py
+    ├─ Extracts RQ evidence (rq1_combines_quantum_psys, etc.)
+    └─ Extracts causal claims (cause → effect with mechanism)
     ↓
-automation/extracted_evidence/*.json (per-paper evidence)
+automation/extracted_evidence/*.json
+    ├─ Track A: scripts/evidence_synthesis.py → evidence_matrix.json
+    │                                                          ↓
+    │                                        hypothesis_exporter.py
+    │                                                          ↓
+    │                                        synthesis/hypotheses.json
+    │
+    └─ Track B: scripts/causal_graph_builder.py → causal_graph.json
+                                                       ↓
+                                        manual/CAUSAL_VALIDATION_TEMPLATE.md
+                                                 (human review)
+                                                       ↓
+                                        experiment_spec_compiler.py
+                                                       ↓
+                                        synthesis/experiment_specs.json
     ↓
-scripts/evidence_synthesis.py (build evidence matrix)
-    ↓
-automation/processed/evidence_matrix.json (RQ × paper × finding)
-    ↓
-scripts/hypothesis_exporter.py (testable hypotheses)
-    ↓
-synthesis/hypotheses.json (consumed by membrane repo)
+membrane repo
+    ├─ paper/model.py (consumes hypotheses.json)
+    └─ benchmarks/runners/cec2017_subset.py (consumes experiment_specs.json)
 ```
+
+**Key innovation:** Causal track turns literature claims into testable experiments with explicit assumptions, not just prose hypotheses.
+
 
 ---
 
@@ -66,6 +103,57 @@ hypothesis-builder/
 ```
 
 ---
+
+## Causal Modeling (NEW: Track B)
+
+The revised pipeline adds explicit **causal claims** extraction and validation:
+
+### What is Causal Modeling?
+
+Instead of just extracting findings (e.g., "dimensionality collapse occurs"), extract **causal relationships**:
+
+```json
+{
+  "cause": "population_diversity",
+  "effect": "premature_convergence",
+  "mechanism": "Search space coverage decreases with low diversity",
+  "direction": "increases",
+  "causal_confidence": "medium",
+  "evidence_type": "controlled_benchmark_experiment"
+}
+```
+
+This enables:
+
+1. **Causal graph synthesis** — Which variables affect which, through which mechanisms?
+2. **Identified confounders** — What must be controlled to isolate the effect?
+3. **Experiment generation** — What interventions can test the causal claim?
+4. **Falsification criteria** — How would we know the hypothesis is wrong?
+
+### Causal Workflow (Phases 1-3)
+
+**Phase 1:** Claude extracts causal claims during evidence extraction
+```bash
+python scripts/evidence_extractor.py --causal-template
+# Shows template for "cause → effect" relationships with provenance
+```
+
+**Phase 2:** Build and validate causal graph
+```bash
+python scripts/causal_graph_builder.py \
+    --extractions "automation/extracted_evidence/*.json" \
+    --output automation/processed/causal_graph.json
+# Output: causal_graph.json (proposed edges) + causal_graph.mmd (diagram)
+# Manual validation: manual/CAUSAL_VALIDATION_TEMPLATE.md
+```
+
+**Phase 3:** Generate experiment specifications
+```bash
+python scripts/experiment_spec_compiler.py \
+    --graph automation/processed/causal_graph.json \
+    --output synthesis/experiment_specs.json
+# Output: testable experiment specs with interventions, outcomes, controls
+```
 
 ## Workflow
 

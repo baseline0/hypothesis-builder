@@ -1,0 +1,136 @@
+{
+  "causal_vocabulary": {
+    "version": "1.0.0",
+    "description": "Canonical vocabulary for causal modeling in QIPS evidence synthesis",
+
+    "node_types": {
+      "exposure": "Algorithm choice, parameter setting, or intervention variable",
+      "outcome": "Measured result: fitness, convergence, runtime",
+      "mediator": "Intermediate variable through which exposure affects outcome",
+      "confounder": "Causes both exposure and outcome; affects association if not controlled",
+      "effect_modifier": "Variable that changes the strength or direction of exposure→outcome",
+      "collider": "Caused by both exposure and outcome; conditioning creates bias",
+      "control_variable": "Held constant in study design to isolate effect"
+    },
+
+    "edge_types": {
+      "causal": "X causes Y (with time ordering)",
+      "mediates": "X → Z → Y (mechanism)",
+      "confounds": "Hidden cause of both X and Y",
+      "modifies": "Strength of X→Y depends on Z",
+      "correlated": "X and Y associated; direction unknown",
+      "contradicts": "One study says X→Y; another says X↛Y"
+    },
+
+    "causal_statuses": [
+      "reported: Authors explicitly state causal claim",
+      "inferred: System extracted from observational data",
+      "proposed: Candidate causal relationship from literature consensus",
+      "validated: Experimental evidence supports causal direction",
+      "disputed: Multiple papers contradict; requires experiment",
+      "rejected: Evidence does not support causal claim"
+    ],
+
+    "evidence_designs": [
+      "randomized_experiment: Exposure randomly assigned",
+      "controlled_benchmark: Intervention on algorithm; confounders held constant",
+      "quasi_experiment: Observational but with matched groups or instrumental variable",
+      "observational_benchmark: No intervention; measures association only",
+      "simulation: Computational rather than empirical",
+      "theoretical": No empirical validation"
+    ],
+
+    "confidence_dimensions": {
+      "extraction_confidence": "How reliably did we extract the claim from text? (high/medium/low)",
+      "evidence_confidence": "How strong is the empirical support for the association? (high/medium/low)",
+      "causal_confidence": "How confident are we that X causes Y (not just correlated)? (high/medium/low)",
+      "mechanism_confidence": "How well understood is the causal pathway? (high/medium/low)",
+      "external_validity": "How likely does this generalize beyond the study population? (high/medium/low)"
+    },
+
+    "estimand": {
+      "name": "Name of causal quantity (e.g., 'average treatment effect')",
+      "treatment": {
+        "variable": "Name of intervention variable",
+        "levels": ["off", "on"],
+        "manipulable": true
+      },
+      "outcome": {
+        "variable": "Name of outcome variable",
+        "metric": "Specific measurement (e.g., 'best_of_run', 'time_to_threshold')",
+        "direction": "increase | decrease"
+      },
+      "population": "Target population (e.g., 'CEC2017 multimodal functions, 10D')",
+      "time_horizon": "Time window (e.g., '200 generations')",
+      "comparator": "What we're comparing against (e.g., 'GA without mechanism')",
+      "confounding_set": [
+        "Variables that must be adjusted or held constant"
+      ],
+      "mediators": [
+        "Variables through which effect operates"
+      ],
+      "effect_modifiers": [
+        "Variables that change effect size or direction"
+      ],
+      "identification_assumptions": [
+        "Consistency: Intervention has well-defined outcome",
+        "No unmeasured confounding: No hidden cause of both treatment and outcome",
+        "Positivity: Both treatment levels are possible for some individuals",
+        "No interference: One unit's treatment does not affect another's outcome"
+      ]
+    },
+
+    "variables_for_qips": {
+      "exposure_candidates": [
+        "algorithm_choice: GA | QIPS",
+        "diversity_mechanism: enabled | disabled",
+        "adaptive_update_frequency: continuous | periodic",
+        "population_size: 50 | 100",
+        "initialization_strategy: random | informed"
+      ],
+      "outcome_candidates": [
+        "final_fitness: best solution found",
+        "convergence_generation: generations to threshold",
+        "convergence_speed: improvement per generation",
+        "solution_diversity: number of unique solutions",
+        "runtime: wall-clock or evaluations"
+      ],
+      "mediator_candidates": [
+        "population_diversity: entropy or distance metrics",
+        "exploration_rate: proportion of novel search space",
+        "exploitation_intensity: concentration on best region",
+        "adaptation_responsiveness: how quickly rules update"
+      ],
+      "confounder_candidates": [
+        "problem_dimension: 10D | 30D | 50D",
+        "function_class: unimodal | multimodal | hybrid | composition",
+        "evaluation_budget: number of function evaluations",
+        "random_seed: initialization and stochastic choices",
+        "benchmark_difficulty: hardness of function"
+      ],
+      "effect_modifier_candidates": [
+        "problem_dimension: effect size may depend on D",
+        "function_modality: benefit may be larger on multimodal",
+        "population_size: small populations may show different effects"
+      ]
+    },
+
+    "validation_statuses": [
+      "accepted: Edge passes human review; treat as valid for graph",
+      "rejected: Evidence does not support edge; remove from graph",
+      "requires_experiment: Plausible but needs empirical validation",
+      "alternative_explanation: Accepted but with caveats",
+      "disputed: Multiple reviewers disagree; flag for discussion"
+    ],
+
+    "graph_invariants": [
+      "Every edge has at least one supporting causal claim",
+      "Every accepted edge has a human reviewer and timestamp",
+      "Every high-confidence edge cites mechanism or experimental evidence",
+      "Contradicting edges are represented with separate entries and status",
+      "Time ordering is explicit (e.g., diversity_t → update_t+1)",
+      "Feedback loops are labeled as cycles, not assumed acyclic",
+      "Generated outputs include input hashes and commit SHAs"
+    ]
+  }
+}
