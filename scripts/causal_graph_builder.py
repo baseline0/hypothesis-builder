@@ -57,11 +57,19 @@ class CausalGraphBuilder:
             confidences = [c["causal_confidence"] for _, c in supporting_claims]
             evidence_designs = [c["evidence_type"] for _, c in supporting_claims]
 
+            # Determine mechanism status (explicit uncertainty handling)
+            mechanism_status = "unknown"
+            if mechanism and len(mechanism.strip()) > 0:
+                # If mechanism string is present, mark as 'hypothesized'
+                # Only change to 'known' after human validation
+                mechanism_status = "hypothesized"
+
             self.edges[edge_id] = {
                 "edge_id": edge_id,
                 "cause": cause,
                 "effect": effect,
                 "mechanism": mechanism,
+                "mechanism_status": mechanism_status,  # known | hypothesized | unknown
                 "direction": directions[0] if directions else "unknown",
                 "supporting_papers": [p for p, _ in supporting_claims],
                 "supporting_claims": len(supporting_claims),
@@ -75,6 +83,7 @@ class CausalGraphBuilder:
                 "review_status": "pending",
                 "reviewer": None,
                 "reviewed_at": None,
+                "source": None,
                 "rationale": None,
             }
 

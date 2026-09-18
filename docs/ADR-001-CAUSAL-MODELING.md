@@ -204,22 +204,66 @@ Produce:
 
 ---
 
+## Graph vs DAG Distinction
+
+The causal repository maintains **two different graph representations**:
+
+### 1. General Causal Claim Graph (`causal_graph.json`)
+
+**Properties:**
+- Nodes: variables extracted from papers
+- Edges: proposed causal claims from literature
+- May contain: cycles, contradictions, time-indexed variables, feedback loops
+- Status: "proposed", "disputed", "requires experiment"
+- Purpose: Literature synthesis; show what papers claimed about what causes what
+
+**Example:**
+```
+diversity_t → convergence_{t+1}
+convergence_t → diversity_{t+1}
+```
+
+(This is a cycle, explicitly time-indexed.)
+
+### 2. Compiled DAG (internal to `experiment_spec_compiler.py`)
+
+**Properties:**
+- Nodes: acyclic, specific to one estimand
+- Edges: accepted, time-ordered causal relationships
+- Time-indexed: explicit t, t+1 ordering
+- Purpose: Design a testable experiment for one specific causal question
+- Status: "validated", ready to execute
+
+**Example:**
+For "Effect of diversity mechanism on final fitness":
+```
+diversity_mechanism → population_diversity → final_fitness
+```
+
+(Acyclic because we've chosen a specific time horizon and outcome.)
+
+**Key:** The general graph is a literature artifact (allowed to have cycles and contradictions). The experiment-specific DAG is compiled from it for a concrete intervention and time horizon.
+
+---
+
 ## Trade-Offs
 
 ### Pro
 
-✅ **Mechanism-aware** — Forces explicit "how" reasoning  
-✅ **Auditable** — Every edge tracked to sources + reviewer  
-✅ **Testable** — Experiment specs are machine-readable  
+✅ **Mechanism-aware** — Forces explicit "how" reasoning; mechanism_status can be known/hypothesized/unknown  
+✅ **Auditable** — Every edge tracked to sources + reviewer + timestamp  
+✅ **Testable** — Experiment specs are machine-readable + machine-validated  
 ✅ **Robust novelty** — Bounded claims ("within our search scope, no prior work...") vs. overconfident absolutes  
-✅ **Prevents automation creep** — Human validates every causal claim
+✅ **Prevents automation creep** — Human validates every edge; compiler enforces gates  
+✅ **Cycle-safe** — General graph can represent feedback; DAG is only for compiled experiments  
 
 ### Con
 
-⚠️ **More work** — Claude extracts claims; user validates them  
-⚠️ **Larger schema** — More fields in `extracted_evidence/*.json`  
-⚠️ **Slower to iterate** — Graph validation before experiment specs  
-⚠️ **Requires domain expertise** — User must understand causal DAGs and confounders  
+⚠️ **More work** — Claude extracts claims; user validates edges in structured form  
+⚠️ **Larger schema** — More fields in extracted evidence and edges  
+⚠️ **Slower to iterate** — Graph validation required before experiment specs  
+⚠️ **Requires domain expertise** — User must understand confounders and estimands  
+⚠️ **Mechanism optional but tracked** — mechanism_status field required; unknown is valid  
 
 ---
 
@@ -280,6 +324,41 @@ Only accepted edges: compile to experiment specs
 ```
 
 Claude proposes; human decides.
+
+---
+
+## Before Processing Full Corpus
+
+**CRITICAL:** Before uploading and processing all 10 papers:
+
+1. Run fixture tests to prove compiler validation:
+   ```bash
+   python tests/test_compiler_validation.py
+   ```
+   
+   These tests verify:
+   - Proposed edges are rejected
+   - Rejected edges are rejected
+   - Incomplete edges (missing reviewer, provenance) are rejected
+   - Complete accepted edges compile to specs
+   - Unknown mechanism is handled correctly
+
+2. Create a 2-3 paper golden fixture:
+   - 1 accepted edge with full provenance
+   - 1 proposed edge (to test rejection)
+   - 1 contradictory edge pair
+   - Run full pipeline: extraction → graph → validation → specs
+
+3. Manually validate the synthetic graph in `manual/CAUSAL_VALIDATION_TEMPLATE.md`
+
+4. Verify `experiment_specs.json` contains all required fields:
+   - estimand (identification_status, confounding_set)
+   - design_controls (explicit: held_constant, stratified, blocked)
+   - analysis plan (summary, uncertainty, seed_policy)
+   - mechanism_status (known/hypothesized/unknown)
+   - provenance chain
+
+**Only after these pass:** Proceed to full 10-paper ingestion.
 
 ---
 

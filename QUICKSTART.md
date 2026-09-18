@@ -1,6 +1,14 @@
-# Quick Start: Evidence Extraction & Synthesis
+# Quick Start: Workflow
 
-## 1️⃣ Extract Evidence (Days 1-10)
+**Important:** Before processing the full corpus, run fixture tests:
+```bash
+python tests/test_compiler_validation.py
+# Should show: All 6 tests passed
+```
+
+This proves the compiler validation gates work. Then proceed:
+
+## Phase 1: Extract Evidence
 
 For each of the 10 papers in `reference/lit_review/`:
 
@@ -20,7 +28,7 @@ ls -1 automation/extracted_evidence/*.json | wc -l
 
 ---
 
-## 2️⃣ Synthesize Evidence (Day 11-12)
+## Phase 2: Build & Validate Causal Graph
 
 Once all 10 papers are extracted:
 
@@ -48,7 +56,18 @@ cat synthesis/hypotheses.json | jq '.hypotheses[].id'
 
 ---
 
-## 3️⃣ Validate & Wire (Days 13-14)
+## Phase 3: Compile & Export
+
+```bash
+# Compile validated graph to experiment specs
+python scripts/experiment_spec_compiler.py \
+    --graph automation/processed/causal_graph.json \
+    --output synthesis/experiment_specs.json
+```
+
+**Note:** Compiler enforces strict validation. Only complete, accepted, reviewed edges compile.
+
+## Phase 4: Integrate with Membrane
 
 **User spot-check:**
 
