@@ -332,14 +332,39 @@ class ExperimentSpecCompiler:
         return predictions
 
     def export(self, output_path: Path) -> None:
-        """Export experiment specifications with provenance."""
+        """
+        Export experiment specifications with full reproducibility metadata.
+
+        Adds schema_version, protocol_version, generator commit, input hashes,
+        and provenance chain for full auditability.
+        """
+        import hashlib
+        import os
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Compute input hash from graph
+        graph_json = json.dumps(self.graph, sort_keys=True)
+        graph_hash = hashlib.sha256(graph_json.encode()).hexdigest()
+
+        # Try to get git commit (for reproducibility)
+        try:
+            commit = os.popen("git rev-parse HEAD 2>/dev/null").read().strip()
+        except:
+            commit = "unknown"
 
         specs = {
             "schema_version": self.SCHEMA_VERSION,
             "export_version": "1.0.0",
-            "generated_at": "2026-09-18T00:00:00Z",
-            "source_graph_generated_at": self.graph.get("generated_at", ""),
+            "protocol_version": "qips-2026-09-18",
+            "generator": {
+                "tool": "experiment_spec_compiler.py",
+                "commit": commit,
+                "timestamp": "2026-09-18T00:00:00Z",
+            },
+            "inputs": {
+                "graph_hash": graph_hash,
+            },
             "total_experiments": len(self.experiments),
             "experiments": list(self.experiments.values()),
             "compiler_validation_enforced": True,
@@ -357,9 +382,11 @@ class ExperimentSpecCompiler:
             json.dump(specs, f, indent=2)
 
         print(f"\nOK: Experiment specs exported: {output_path}")
+        print(f"   Schema version: {self.SCHEMA_VERSION}")
+        print(f"   Generator commit: {commit[:8] if commit != 'unknown' else 'unknown'}")
         print(f"   Total experiments: {len(self.experiments)}")
+        print(f"   Graph hash: {graph_hash[:16]}...")
         print(f"   Status: Ready for membrane integration")
-        print(f"   Validation: {len(specs.get('validation_checks', []))} checks enforced")
 
 
 def main():
