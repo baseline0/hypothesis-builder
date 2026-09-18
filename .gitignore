@@ -1,0 +1,30 @@
+# Papers (local, not committed)
+reference/lit_review/*.pdf
+
+# Automation outputs (regenerated on each run)
+automation/extracted_evidence/*.json
+automation/processed/*.json
+synthesis/hypotheses.json
+
+# Manual review artifacts
+manual/*.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.env
+.env.local
