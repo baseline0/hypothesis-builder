@@ -1,7 +1,7 @@
 # hypothesis-builder: Implementation Checklist
 
 **Last Updated:** 2026-09-18  
-**Status:** Phases 1-3 complete. Phases 4-7 ready for implementation.
+**Status:** Phases 1-4 complete (23 tests passing). Phases 5-7 ready for implementation.
 
 ---
 
@@ -38,16 +38,27 @@
 - **Tests:** Ready for Phase 6
 - **Status:** Ready
 
+### Phase 4: Consumer Validator ✅
+- **File:** `scripts/validate_experiment_specs.py`
+- **Tests:** All 11 passing
+  - ✓ test_valid_spec_passes
+  - ✓ test_missing_estimand_fails
+  - ✓ test_missing_design_fails
+  - ✓ test_missing_design_controls_fails
+  - ✓ test_missing_analysis_fails
+  - ✓ test_missing_provenance_fails
+  - ✓ test_treatment_equals_outcome_fails
+  - ✓ test_wrong_schema_version_fails
+  - ✓ test_total_experiments_mismatch_fails
+  - ✓ test_multiple_valid_specs_pass
+  - ✓ test_empty_experiments_fails
+- **Deliverable:** Schema validation + business rule checks (treatment ≠ outcome)
+- **Exit codes:** 0 on valid, 1 on validation error
+- **Status:** Verified
+
 ---
 
 ## ⏳ Remaining Phases
-
-### Phase 4: Consumer Validator ⏳
-- **File:** `scripts/validate_experiment_specs.py` (NEW)
-- **Deliverable:** Schema validation + business rule checks
-- **Implementation guide:** See `PHASES_2_TO_7_GUIDE.md` (Phase 4 section)
-- **Effort:** ~1 hour
-- **Next:** After Phase 4, proceed to Phase 5
 
 ### Phase 5: ADR Update ⏳
 - **File:** `docs/ADR-001-CAUSAL-MODELING.md` (EDIT)
@@ -98,10 +109,9 @@
 |-----------|--------|-------|
 | test_compiler_validation.py | ✅ Passing | 7 tests |
 | test_compiler_exit_codes.py | ✅ Passing | 5 tests |
-| test_golden_path_fixture | ✅ Ready | Not yet run |
-| Run existing: | `python tests/test_compiler_validation.py` |
-| Run exit codes: | `python tests/test_compiler_exit_codes.py` |
-| Run fixture: | `python tests/fixtures/golden_fixture_10_types.py` |
+| test_consumer_validator.py | ✅ Passing | 11 tests |
+| **Total** | **✅ Passing** | **23 tests** |
+| Run all: | `pytest tests/` |
 
 ---
 
@@ -154,15 +164,15 @@ bash tests/fixtures/run_golden_path.sh
 
 **Before processing 10 papers, verify:**
 
-- [ ] All 7 phases complete
+- [x] Phases 1-4 complete (23 tests passing)
+- [ ] Phase 5: ADR updated
+- [ ] Phase 6: Golden path validated
+- [ ] Phase 7: Authorization checklist
 - [ ] run_golden_path.sh passes
-- [ ] All tests passing
 - [ ] Hashes independently reproducible
-- [ ] ADR documents all policies
-- [ ] Manual review flow validated
-- [ ] Consumer schema validates specs
+- [ ] Consumer validator rejects invalid specs
 
-**Authorization status:** PENDING (waiting for Phases 4-7)
+**Authorization status:** PENDING (waiting for Phases 5-7)
 
 ---
 
