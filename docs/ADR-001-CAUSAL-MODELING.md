@@ -327,42 +327,200 @@ Claude proposes; human decides.
 
 ---
 
+## Contradiction Detection (Phase 1)
+
+**Definition:** A contradiction exists when two edges have:
+- Same cause variable
+- Same effect variable  
+- Opposite directions (one "increases", one "decreases")
+
+**Example:**
+```json
+{
+  "edge_1": {
+    "cause": "diversity_mechanism",
+    "effect": "final_fitness",
+    "direction": "increases"
+  },
+  "edge_2": {
+    "cause": "diversity_mechanism",
+    "effect": "final_fitness",
+    "direction": "decreases"
+  }
+}
+```
+
+**Policy:**
+- Contradictions are **detected** by `scripts/detect_contradictions.py`
+- Marked in graph with `status: "disputed"` or `disputed: true`
+- **Excluded from normal specs compilation** (not emitted as experiments)
+- **Optional:** May be compiled as discriminating experiments with `purpose: "discriminating"` to help resolve the contradiction
+- Require human resolution before proceeding
+
+---
+
+## Validation Workflow (Phases 1-4)
+
+The complete pipeline enforces gates at every step:
+
+### Phase 0: Graph Building
+```
+Evidence extraction → Causal claims → causal_graph.json
+All edges: status = "proposed" or "rejected"
+```
+
+### Phase 1: Contradiction Detection  
+```
+Input: causal_graph.json
+Process: Identify same-estimand opposite-direction edges
+Output: causal_graph_marked.json (disputed edges flagged)
+Tool: scripts/detect_contradictions.py
+```
+
+### Phase 2: Manual Validation (Gate 1)
+```
+Input: causal_graph_marked.json
+Process: Human reviews each edge
+Decisions per edge:
+  - "accept" → status = "accepted"
+  - "reject" → status = "rejected"
+  - "requires_experiment" → flag for Phase 6 (discriminating)
+Output: manual/causal_validations.jsonl (JSONL records + graph_hash binding)
+Gate: No edge compiles without human approval
+```
+
+### Phase 3: Import Validations (Gate 2)
+```
+Input: manual/causal_validations.jsonl + causal_graph_marked.json
+Process: Applies validation decisions; binds graph_hash for reproducibility
+Output: causal_graph_validated.json (only "accepted" edges remain)
+Tool: scripts/import_causal_validations.py
+Gate: Hash mismatch → revalidation required
+```
+
+### Phase 4: Experiment Spec Compilation (Gate 3)
+```
+Input: causal_graph_validated.json
+Process: For each "accepted" edge, validate:
+  ✓ status == "accepted"
+  ✓ reviewer present (human accountability)
+  ✓ reviewed_at present (timestamp)
+  ✓ provenance complete (paper_id, page, quote)
+  ✓ cause and effect defined
+  ✓ direction specified
+  ✓ mechanism_status explicit (known/hypothesized/unknown)
+  ✓ supporting_papers non-empty list
+Output: synthesis/experiment_specs.json (only validated edges)
+Tool: scripts/experiment_spec_compiler.py
+Gate: Exit code 1 if no valid edges; 0 if mixed valid/invalid
+```
+
+### Phase 5: Consumer Validation (Gate 4)
+```
+Input: synthesis/experiment_specs.json
+Process: Validate all experiments:
+  ✓ schema_version == "1.0.0"
+  ✓ estimand present + treatment ≠ outcome
+  ✓ design.design_controls non-empty
+  ✓ analysis present
+  ✓ provenance present + complete
+Output: Validation report (accepted or rejected)
+Tool: scripts/validate_experiment_specs.py
+Gate: Exit code 0 = membrane ready; 1 = fix required
+```
+
+**Key:** Each gate is independent and auditable. Edges fail fast; invalid edges never reach specs.
+
+---
+
+## Exit Codes Policy
+
+All CLI tools enforce deterministic exit codes for CI/CD integration:
+
+| Tool | Exit 0 | Exit 1 |
+|------|--------|--------|
+| `experiment_spec_compiler.py` | ≥1 valid edge compiled | No valid edges found |
+| `detect_contradictions.py` | Complete (contradictions logged) | File I/O error |
+| `validate_experiment_specs.py` | All specs pass schema + rules | Any schema/rule violation |
+| `import_causal_validations.py` | Validations applied successfully | Hash mismatch or validation error |
+
+**Guarantee:** Exit code 0 means "safe to proceed to next phase"; exit code 1 means "fix before proceeding".
+
+---
+
+## Fixture Contract (Phase 3)
+
+The enhanced fixture (`tests/fixtures/golden_fixture_10_types.py`) covers all edge types:
+
+| Edge | Type | Status | Purpose |
+|------|------|--------|---------|
+| 1 | Accepted + known mechanism + complete | ✓ accepted | Golden path (should compile) |
+| 2 | Accepted + unknown mechanism (exploratory) | ✓ accepted | Mechanism uncertainty handling |
+| 3 | Low confidence + observational | ✓ accepted | Confidence tracking |
+| 4-5 | Contradictory pair (same estimand, opposite direction) | ✓ detected | Contradiction handling |
+| 6-7 | Independent outcomes (same cause, different effects) | ✓ accepted | Divergent causal effects |
+| 8 | Multiple supporting papers | ✓ accepted | Evidence aggregation |
+| 9 | Proposed (not reviewed) | ✗ rejected | Prevents unreviewed edges |
+| 10 | Incomplete (missing reviewer) | ✗ rejected | Enforces accountability |
+
+**Invariant:** The fixture must:
+- Compile 8 valid specs (edges 1-8)
+- Reject 2 invalid edges (9-10)
+- Flag contradictions (4-5)
+- Handle all mechanism statuses
+
+**Test:** `python tests/test_compiler_validation.py::test_golden_path_fixture`
+
+---
+
 ## Before Processing Full Corpus
 
 **CRITICAL:** Before uploading and processing all 10 papers:
 
-1. Run fixture tests to prove compiler validation:
+1. Run all phase tests:
    ```bash
-   python tests/test_compiler_validation.py
+   pytest tests/ -v
+   # Should show: 23 tests passing (phases 1-4)
    ```
-   
-   These tests verify:
-   - Proposed edges are rejected
-   - Rejected edges are rejected
-   - Incomplete edges (missing reviewer, provenance) are rejected
-   - Complete accepted edges compile to specs
-   - Unknown mechanism is handled correctly
 
-2. Create a 2-3 paper golden fixture:
-   - 1 accepted edge with full provenance
-   - 1 proposed edge (to test rejection)
-   - 1 contradictory edge pair
-   - Run full pipeline: extraction → graph → validation → specs
+2. Verify golden path fixture:
+   ```bash
+   python tests/fixtures/golden_fixture_10_types.py
+   # Should compile 8 valid specs, reject 2 invalid
+   ```
 
-3. Manually validate the synthetic graph in `manual/CAUSAL_VALIDATION_TEMPLATE.md`
+3. Run consumer validator on fixture output:
+   ```bash
+   python scripts/validate_experiment_specs.py synthesis/experiment_specs.json
+   # Should report: VALID (ready for membrane ingestion)
+   ```
 
-4. Verify `experiment_specs.json` contains all required fields:
-   - estimand (identification_status, confounding_set)
-   - design_controls (explicit: held_constant, stratified, blocked)
-   - analysis plan (summary, uncertainty, seed_policy)
-   - mechanism_status (known/hypothesized/unknown)
-   - provenance chain
+4. Verify ADR documents all policies (this section)
 
-**Only after these pass:** Proceed to full 10-paper ingestion.
+5. Verify exit code guarantees:
+   - Compiler: exit 0 with specs, exit 1 with no valid edges
+   - Validator: exit 0 with valid specs, exit 1 with errors
+
+**Only after all tests pass:** Proceed to full 10-paper ingestion.
 
 ---
 
-## Next Steps (Phase 4)
+## Next Steps
+
+### Phase 5: ADR Complete (Current) ✅
+ADR now documents:
+- Contradiction detection semantics
+- Full validation workflow (phases 1-4)
+- Exit codes policy
+- Fixture contract
+
+### Phase 6: Golden Path Script
+Create `tests/fixtures/run_golden_path.sh` for end-to-end validation from clean checkout
+
+### Phase 7: Authorization Gate
+Create `AUTHORIZATION_GATE.md` checklist before corpus ingestion
+
+### Future: Membrane Integration (Beyond Phase 7)
 
 Wire `experiment_specs.json` into `membrane`:
 
