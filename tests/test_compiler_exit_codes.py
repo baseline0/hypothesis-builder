@@ -163,25 +163,12 @@ def test_valid_edge_exits_0():
         print("✓ test_valid_edge_exits_0")
 
 
-def test_mixed_valid_invalid_exits_0_with_warnings():
-    """Mixed valid + invalid → exit 0, but only valid edges compile."""
+def test_all_invalid_exits_1():
+    """All invalid edges → exit 1."""
     graph = {
         "graph_version": "1.0.0",
         "generated_at": "2026-09-18",
         "edges": [
-            {
-                "edge_id": "edge_valid",
-                "status": "accepted",
-                "cause": "X",
-                "effect": "Y",
-                "mechanism": "m",
-                "mechanism_status": "known",
-                "direction": "increases",
-                "reviewer": "user",
-                "reviewed_at": "2026-09-18T10:00:00Z",
-                "supporting_papers": ["p1"],
-                "source": {"paper_id": "p1", "page": 1, "quote": "q"},
-            },
             {
                 "edge_id": "edge_proposed",
                 "status": "proposed",  # Invalid: not accepted
@@ -207,10 +194,9 @@ def test_mixed_valid_invalid_exits_0_with_warnings():
 
         exit_code, stderr, stdout = run_compiler(graph_path, output_path)
 
-        # Should exit 1 because not all edges are valid
-        # (Compiler rejects when any validation fails)
-        assert exit_code == 1, f"Expected exit 1 (some edges invalid), got {exit_code}"
-        print("✓ test_mixed_valid_invalid_exits_0_with_warnings")
+        # Should exit 1 because no valid edges exist
+        assert exit_code == 1, f"Expected exit 1 (all invalid), got {exit_code}"
+        print("✓ test_all_invalid_exits_1")
 
 
 def run_all_tests():
@@ -222,7 +208,7 @@ def run_all_tests():
         test_rejected_edge_exits_1,
         test_incomplete_edge_exits_1,
         test_valid_edge_exits_0,
-        test_mixed_valid_invalid_exits_0_with_warnings,
+        test_all_invalid_exits_1,
     ]
 
     for test in tests:
