@@ -1,0 +1,26 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: hypothesis-builder
+  title: Hypothesis Builder
+  description: Experimental research project for automated test hypothesis generation from API specifications
+  labels:
+    layer: "2"
+    type: research
+    language: python
+    status: experimental
+spec:
+  type: library
+  lifecycle: experimental
+  owner: mark-alexiuk
+  dependsOn:
+    - fleet-base
+  provides:
+    - HypothesisSynthesis
+    - TestGeneration
+    - APIAnalysis
+  tags:
+    - research
+    - testing
+    - api-analysis
+    - hypothesis-generation

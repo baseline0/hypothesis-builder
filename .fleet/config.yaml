@@ -1,0 +1,31 @@
+# Fleet configuration for hypothesis-builder
+# Experimental research project for test hypothesis generation
+
+type: research
+language: python
+test_framework: pytest
+
+# Standards compliance
+standards:
+  type_hints: optional
+  docstrings: google-style
+  max_line_length: 120
+
+# Governance - minimal for experimental repo
+governance:
+  enabled: false  # No automated fixes for experimental projects
+  fixable-categories: []
+  protected-paths:
+    - AUTHORIZATION_GATE.md
+    - automation/
+
+# Testing requirements
+testing:
+  min_coverage: 0  # Experimental: coverage not required
+  test_command: pytest tests/
+  coverage_report: html
+
+# Guard rails
+guard-rails:
+  max-lines-changed: 2000
+  require-approval: false
