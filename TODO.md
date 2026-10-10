@@ -1,8 +1,10 @@
 # hypothesis-builder
 
-## 🔧 Tech Debt - `techdebt`
+## 🧭 Decisions - `decision`
 
-- [ ] Generated outputs are untracked: `automation/processed/causal_graph.mmd` and `synthesis/golden_path_test.json`, `synthesis/test_specs.json`, `synthesis/test_specs_invalid.json`, `synthesis/test_specs_invalid_rule.json`. Decide per file: track as fixtures, or gitignore as generated output.
+- [ ] **Generated outputs: track as fixtures, or gitignore.** `automation/processed/causal_graph.mmd` and the `synthesis/*.json` specs are untracked. Decide per file.
+
+## 🔧 Tech Debt - `techdebt`
 
 ---
 
