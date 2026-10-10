@@ -1,6 +1,11 @@
+# hypothesis-builder
 
+## 🔧 Tech Debt
 
-## Cleanup Leftovers (2026-10-09)
+- [ ] Generated outputs are untracked: `automation/processed/causal_graph.mmd` and `synthesis/golden_path_test.json`, `synthesis/test_specs.json`, `synthesis/test_specs_invalid.json`, `synthesis/test_specs_invalid_rule.json`. Decide per file: track as fixtures, or gitignore as generated output.
 
-- Generated outputs are untracked or modified: `automation/processed/causal_graph.mmd`, and the `synthesis/*.json` specs. Decide per file: track as fixtures, or gitignore as generated output.
-- Work in progress from the 2026-10-08 cleanup is committed under a `wip:` message. Review it.
+---
+
+## Done (removed)
+
+- Review of the 2026-10-08 `wip:` commit: no such commit exists in the history, so there is nothing to review.
