@@ -16,6 +16,8 @@ Tests all important edge types:
 import json
 from pathlib import Path
 
+from constants import REPO_ROOT
+
 
 def create_10_type_fixture():
     """Create fixture with all 10 important edge types."""
@@ -218,8 +220,8 @@ def test_enhanced_fixture_compilation():
 
     Final result: 6-8 valid specs (depending on contradiction policy)
     """
-    import tempfile
     import subprocess
+    import tempfile
 
     edges = create_10_type_fixture()
 
@@ -249,7 +251,7 @@ def test_enhanced_fixture_compilation():
                 "--output",
                 str(tmpdir / "graph_contradictions.json"),
             ],
-            cwd=Path(__file__).parent.parent.parent,
+            cwd=REPO_ROOT,
             check=False,
         )
 
@@ -264,7 +266,7 @@ def test_enhanced_fixture_compilation():
                 "--output",
                 str(specs_path),
             ],
-            cwd=Path(__file__).parent.parent.parent,
+            cwd=REPO_ROOT,
             capture_output=True,
         )
 
@@ -280,8 +282,8 @@ def test_enhanced_fixture_compilation():
 
 def test_valid_subset_only():
     """Test that only valid edges 1-8 would compile."""
-    import tempfile
     import subprocess
+    import tempfile
 
     edges = create_10_type_fixture()
     valid_edges = [e for e in edges if e["edge_id"] in [
@@ -320,7 +322,7 @@ def test_valid_subset_only():
                 "--output",
                 str(specs_path),
             ],
-            cwd=Path(__file__).parent.parent.parent,
+            cwd=REPO_ROOT,
             capture_output=True,
         )
 

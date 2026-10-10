@@ -18,7 +18,9 @@ import tempfile
 from pathlib import Path
 
 # Add scripts to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+from constants import REPO_ROOT
+
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from experiment_spec_compiler import ExperimentSpecCompiler
 

@@ -8,10 +8,12 @@ Tests that compiler exits with correct codes at process boundary.
 - Mixed valid/invalid → exit 0 with warnings
 """
 
-import subprocess
 import json
+import subprocess
 import tempfile
 from pathlib import Path
+
+from constants import REPO_ROOT
 
 
 def run_compiler(graph_path: Path, output_path: Path) -> tuple:
@@ -25,7 +27,7 @@ def run_compiler(graph_path: Path, output_path: Path) -> tuple:
             "--output",
             str(output_path),
         ],
-        cwd=Path(__file__).parent.parent,
+        cwd=REPO_ROOT,
         capture_output=True,
         text=True,
     )
