@@ -28,3 +28,9 @@ venv/
 .DS_Store
 .env
 .env.local
+# Unit test / coverage reports
+.coverage
+.coverage.*
+*.cover
+coverage.xml
+htmlcov/
