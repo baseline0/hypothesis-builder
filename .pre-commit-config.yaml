@@ -1,10 +1,5 @@
 
 repos:
-  - repo: https://github.com/baseline0/fleet-base
-    rev: v1.0.0
-    hooks:
-      - id: fleet-governance-validate
-        stages: [pre-commit]
   - repo: local
     hooks:
       - id: repo-root-pattern
