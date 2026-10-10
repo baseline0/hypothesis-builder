@@ -1,5 +1,8 @@
 #!/usr/bin/env just --justfile
 
+# Shared commit recipe from fleet-base. Literal path: just does not interpolate variables into import paths.
+import "../fleet-base/src/fleet_base/justfiles/shared/commit.just"
+
 # Minimal fleet justfile. Recipes are grouped (see fleet-base/templates/justfile.template).
 # Run `just --list` to see every recipe.
 
