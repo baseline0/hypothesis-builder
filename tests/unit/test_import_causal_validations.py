@@ -6,7 +6,9 @@ a missing input file is reported with exit 1, and metadata keys do not change th
 """
 
 import json
+import re
 import sys
+import warnings
 
 from constants import REPO_ROOT
 
@@ -138,3 +140,19 @@ def test_cli_missing_validations_file_exits_1(tmp_path):
 
     assert result.exit_code == 1
     assert f"ERROR: Validations file not found: {missing}" in result.output
+
+
+def test_export_timestamp_is_utc_iso_without_offset_and_warns_nothing(tmp_path):
+    graph_hash = compute_graph_hash(GRAPH)
+    graph_path, validations_path = _write_inputs(tmp_path, [_record(graph_hash)])
+    importer = ValidationImporter(graph_path, validations_path)
+    assert importer.apply_validations() is True
+    output = tmp_path / "validated.json"
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        importer.export(output)
+
+    timestamp = json.loads(output.read_text())["validation_metadata"]["validation_timestamp"]
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{6})?Z", timestamp), timestamp
+    assert "+00:00" not in timestamp

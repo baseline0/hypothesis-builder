@@ -20,7 +20,7 @@ Usage:
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, ClassVar
 
@@ -167,7 +167,7 @@ class ValidationImporter:
         # Add validation metadata (but not to hash)
         self.graph["validation_metadata"] = {
             "validations_applied": len(self.validations),
-            "validation_timestamp": datetime.utcnow().isoformat() + "Z",
+            "validation_timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat() + "Z",
             "graph_hash_at_validation": self.graph_hash,
         }
 
