@@ -11,6 +11,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.0",
     "pytest>=7.4.0",
     "ruff==0.16.8",
 ]
@@ -34,3 +35,8 @@ ignore = ["E501", "SIM105", "N818", "RUF001", "RUF002", "RUF022"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "argparse".msg = "Use typer for CLIs (fleet mandate)."
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.13"
+include = ["constants.py", "scripts", "tests"]

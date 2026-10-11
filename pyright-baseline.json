@@ -1,0 +1,16 @@
+{
+  "scripts/evidence_synthesis.py": 2,
+  "scripts/import_causal_validations.py": 1,
+  "tests/unit/test_causal_graph_builder.py": 1,
+  "tests/unit/test_causal_graph_builder_cli.py": 1,
+  "tests/unit/test_compiler_validation.py": 1,
+  "tests/unit/test_detect_contradictions.py": 1,
+  "tests/unit/test_detect_contradictions_cli.py": 1,
+  "tests/unit/test_evidence_extractor.py": 1,
+  "tests/unit/test_evidence_extractor_cli.py": 1,
+  "tests/unit/test_evidence_synthesis.py": 1,
+  "tests/unit/test_experiment_spec_compiler_cli.py": 1,
+  "tests/unit/test_hypothesis_exporter.py": 1,
+  "tests/unit/test_import_causal_validations.py": 1,
+  "tests/unit/test_validate_experiment_specs.py": 1
+}

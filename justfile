@@ -15,3 +15,7 @@ default:
 [group("testing")]
 test:
     @if [ -d tests ]; then uv run pytest tests/ -v; else echo "no tests/ directory in this repo"; fi
+
+# Pyright ratchet: fails when a file gains errors (scripts in fleet-base; mode from pyproject.toml).
+check-types:
+    uv run python ../fleet-base/scripts/pyright_ratchet.py check
