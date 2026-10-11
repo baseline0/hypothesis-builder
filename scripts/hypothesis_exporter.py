@@ -12,9 +12,16 @@ Usage:
 """
 
 import json
-import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Annotated, Any
+
+import typer
+
+app = typer.Typer(
+    help="Export testable hypotheses from evidence synthesis", add_completion=False, pretty_exceptions_enable=False
+)
+
+DEFAULT_OUTPUT = Path("synthesis/hypotheses.json")
 
 
 class HypothesisExporter:
@@ -24,7 +31,7 @@ class HypothesisExporter:
         with open(evidence_path) as f:
             self.evidence = json.load(f)
 
-    def build_hypotheses(self) -> Dict[str, Any]:
+    def build_hypotheses(self) -> dict[str, Any]:
         """Build testable hypotheses from evidence."""
         evidence_data = self.evidence["evidence"]
 
@@ -47,7 +54,7 @@ class HypothesisExporter:
             },
         }
 
-    def _build_h1_novelty(self, rq1_data: Dict) -> Dict[str, Any]:
+    def _build_h1_novelty(self, rq1_data: dict) -> dict[str, Any]:
         """H1: Novelty claim."""
         return {
             "id": "H1_novelty",
@@ -60,7 +67,7 @@ class HypothesisExporter:
             "implication": "QIPS is defensibly novel; can proceed with novelty claim in paper",
         }
 
-    def _build_h2_collapse(self, rq2_data: Dict) -> Dict[str, Any]:
+    def _build_h2_collapse(self, rq2_data: dict) -> dict[str, Any]:
         """H2: Dimensionality collapse mechanism."""
         return {
             "id": "H2_collapse",
@@ -73,7 +80,7 @@ class HypothesisExporter:
             "implication": "Design QIPS to maintain diversity via P-system hierarchies; test whether QIPS avoids collapse",
         }
 
-    def _build_h3_adaptation(self, rq3_data: Dict) -> Dict[str, Any]:
+    def _build_h3_adaptation(self, rq3_data: dict) -> dict[str, Any]:
         """H3: Adaptive strategies."""
         mechanisms = list(rq3_data.get("mechanisms", {}).keys())
         return {
@@ -87,7 +94,7 @@ class HypothesisExporter:
             "implication": "Combine GA tournament selection + PSO inertia weight decay + P-system rule updates in QIPS",
         }
 
-    def _build_h4_baseline(self, rq4_data: Dict) -> Dict[str, Any]:
+    def _build_h4_baseline(self, rq4_data: dict) -> dict[str, Any]:
         """H4: GA baseline performance."""
         return {
             "id": "H4_baseline",
@@ -101,7 +108,7 @@ class HypothesisExporter:
             "implication": "Target: QIPS should outperform GA baseline by 10-20% on CEC2017 subset",
         }
 
-    def _build_h5_scalability(self, rq5_data: Dict) -> Dict[str, Any]:
+    def _build_h5_scalability(self, rq5_data: dict) -> dict[str, Any]:
         """H5: Scalability to high-D."""
         return {
             "id": "H5_scalability",
@@ -114,7 +121,7 @@ class HypothesisExporter:
             "implication": "QIPS may handle high-D better than quantum-inspired algorithms; document degradation curve",
         }
 
-    def _build_novelty_statement(self, hypotheses: List[Dict]) -> str:
+    def _build_novelty_statement(self, hypotheses: list[dict]) -> str:
         """Build comprehensive novelty statement from hypotheses."""
         h1 = hypotheses[0]
         h2 = hypotheses[1]
@@ -128,10 +135,8 @@ class HypothesisExporter:
             f"We validate against GA baseline on 10D CEC2017 subset, targeting 10-20% improvement in solution quality."
         )
 
-    def _extract_parameters(self) -> Dict[str, Any]:
+    def _extract_parameters(self) -> dict[str, Any]:
         """Extract recommended parameters from baseline data."""
-        rq4_baseline = self.evidence["evidence"].get("RQ4_baseline", {}).get("averaged_results", {})
-
         # Extract GA baseline parameters (standard values if not in data)
         return {
             "ga_baseline": {
@@ -162,43 +167,37 @@ class HypothesisExporter:
         with open(output_path, "w") as f:
             json.dump(hypotheses, f, indent=2)
         print(f"\n✅ Hypotheses exported: {output_path}")
-        print(f"\nNovelty Statement:")
+        print("\nNovelty Statement:")
         print(f"  {hypotheses['novelty_statement']}")
-        print(f"\nTestable Hypotheses:")
+        print("\nTestable Hypotheses:")
         for h in hypotheses["hypotheses"]:
             print(f"  - {h['id']}: {h['confidence']} confidence")
 
 
-def main():
-    """Main entry point."""
-    import argparse
+def evidence_missing_message(evidence_path: Path) -> str | None:
+    """Error message when the evidence file does not exist, otherwise None."""
+    if evidence_path.exists():
+        return None
+    return f"❌ Evidence file not found: {evidence_path}"
 
-    parser = argparse.ArgumentParser(description="Export testable hypotheses from evidence synthesis")
-    parser.add_argument(
-        "--evidence",
-        type=Path,
-        required=True,
-        help="Path to evidence_matrix.json from synthesis step",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("synthesis/hypotheses.json"),
-        help="Output path for hypotheses",
-    )
 
-    args = parser.parse_args()
+@app.command()
+def main(
+    evidence: Annotated[Path, typer.Option("--evidence", help="Path to evidence_matrix.json from synthesis step")],
+    output: Annotated[Path, typer.Option("--output", help="Output path for hypotheses")] = DEFAULT_OUTPUT,
+) -> None:
+    """Export testable hypotheses from evidence synthesis."""
+    problem = evidence_missing_message(evidence)
+    if problem is not None:
+        typer.echo(problem)
+        raise typer.Exit(code=1)
 
-    if not args.evidence.exists():
-        print(f"❌ Evidence file not found: {args.evidence}")
-        sys.exit(1)
+    typer.echo("📋 Hypothesis Exporter")
+    typer.echo(f"   Reading evidence from: {evidence}")
 
-    print(f"📋 Hypothesis Exporter")
-    print(f"   Reading evidence from: {args.evidence}")
-
-    exporter = HypothesisExporter(args.evidence)
-    exporter.export(args.output)
+    exporter = HypothesisExporter(evidence)
+    exporter.export(output)
 
 
 if __name__ == "__main__":
-    main()
+    app()
