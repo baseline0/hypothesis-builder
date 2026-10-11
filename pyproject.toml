@@ -5,7 +5,9 @@ description = "Hypothesis specification compiler and validators"
 requires-python = ">=3.13"
 authors = [{name = "Mark Alexiuk", email = "malexiuk@gmail.com"}]
 license = {text = "MIT"}
-dependencies = []
+dependencies = [
+    "typer>=0.27.3",
+]
 
 [dependency-groups]
 dev = [
