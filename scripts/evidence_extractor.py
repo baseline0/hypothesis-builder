@@ -12,10 +12,13 @@ Usage:
 """
 
 import json
-import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Annotated
+
+import typer
+
+app = typer.Typer(help="Extract evidence from a paper (Claude reads the PDF in session)", add_completion=False)
 
 
 @dataclass
@@ -26,7 +29,7 @@ class PaperEvidence:
     title: str
     authors: str
     year: int
-    doi: Optional[str]
+    doi: str | None
     access_status: str
 
     # Study design
@@ -34,9 +37,9 @@ class PaperEvidence:
     problem_domain: str
     benchmark_suite: str
     dimensions_tested: str
-    population_size: Optional[int]
-    generations: Optional[int]
-    num_runs: Optional[int]
+    population_size: int | None
+    generations: int | None
+    num_runs: int | None
 
     # Main contribution
     novel_idea: str
@@ -177,31 +180,46 @@ def export_evidence(evidence: dict, output_path: Path) -> None:
     print(f"✅ Exported: {output_path}")
 
 
-def main():
-    """Main entry point."""
-    import argparse
+DEFAULT_OUTPUT = Path("automation/extracted_evidence")
 
-    parser = argparse.ArgumentParser(
-        description="Extract evidence from paper (Claude reads PDF in session)"
-    )
-    parser.add_argument("--template", action="store_true", help="Show empty evidence template")
-    parser.add_argument("--causal-template", action="store_true", help="Show causal claim template")
-    parser.add_argument("--output", type=Path, default=Path("automation/extracted_evidence"))
 
-    args = parser.parse_args()
+def render_template() -> str:
+    """The empty evidence template as indented JSON text."""
+    return json.dumps(create_template_evidence(), indent=2)
 
-    if args.template:
-        print(json.dumps(create_template_evidence(), indent=2))
+
+def render_causal_template() -> str:
+    """The causal claim template as indented JSON text."""
+    return json.dumps(create_causal_claim_template(), indent=2)
+
+
+def session_banner(output: Path) -> list[str]:
+    """Instructions printed when no template flag is given."""
+    return [
+        "📐 Evidence Extractor",
+        "In this session, Claude reads PDFs directly and fills the template.",
+        f"Export to: {output}/",
+    ]
+
+
+@app.command()
+def main(
+    template: Annotated[bool, typer.Option("--template", help="Show empty evidence template")] = False,
+    causal_template: Annotated[bool, typer.Option("--causal-template", help="Show causal claim template")] = False,
+    output: Annotated[Path, typer.Option("--output", help="Export directory")] = DEFAULT_OUTPUT,
+) -> None:
+    """Extract evidence from a paper (Claude reads the PDF in session)."""
+    if template:
+        typer.echo(render_template())
         return
 
-    if args.causal_template:
-        print(json.dumps(create_causal_claim_template(), indent=2))
+    if causal_template:
+        typer.echo(render_causal_template())
         return
 
-    print("📐 Evidence Extractor")
-    print("In this session, Claude reads PDFs directly and fills the template.")
-    print(f"Export to: {args.output}/")
+    for line in session_banner(output):
+        typer.echo(line)
 
 
 if __name__ == "__main__":
-    main()
+    app()

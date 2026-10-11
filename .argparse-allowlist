@@ -1,6 +1,5 @@
 # Files that still import argparse. Convert each to Typer, then remove its line.
 scripts/causal_graph_builder.py
-scripts/evidence_extractor.py
 scripts/evidence_synthesis.py
 scripts/experiment_spec_compiler.py
 scripts/hypothesis_exporter.py
