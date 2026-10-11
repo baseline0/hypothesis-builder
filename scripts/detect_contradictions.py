@@ -13,10 +13,16 @@ Disputed edges (from validation) are excluded from ordinary specs.
 
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple, Set
+from typing import Annotated
+
+import typer
+
+app = typer.Typer(help="Detect contradictory causal claims in graph", add_completion=False)
+
+DEFAULT_OUTPUT = Path("automation/processed/causal_graph_contradictions_marked.json")
 
 
-def compute_claim_key(edge: Dict) -> Tuple:
+def compute_claim_key(edge: dict) -> tuple:
     """
     Compute normalized claim key for contradiction detection.
 
@@ -31,21 +37,21 @@ def compute_claim_key(edge: Dict) -> Tuple:
     )
 
 
-def detect_contradictions(edges: List[Dict]) -> Dict[str, List[str]]:
+def detect_contradictions(edges: list[dict]) -> dict[str, list[str]]:
     """
     Detect contradictory edges and return mapping.
 
     Returns: {edge_id: [contradicting_edge_ids]}
     """
     # Group edges by claim key
-    by_key: Dict[Tuple, List[Dict]] = {}
+    by_key: dict[tuple, list[dict]] = {}
     for edge in edges:
         key = compute_claim_key(edge)
         if key not in by_key:
             by_key[key] = []
         by_key[key].append(edge)
 
-    contradictions: Dict[str, List[str]] = {}
+    contradictions: dict[str, list[str]] = {}
 
     # Find contradictions: same key, opposite direction
     for key, group in by_key.items():
@@ -53,7 +59,7 @@ def detect_contradictions(edges: List[Dict]) -> Dict[str, List[str]]:
             continue
 
         # Group by direction within this claim key
-        by_direction: Dict[str, List[Dict]] = {}
+        by_direction: dict[str, list[dict]] = {}
         for edge in group:
             direction = edge.get("direction", "unknown")
             if direction not in by_direction:
@@ -64,14 +70,12 @@ def detect_contradictions(edges: List[Dict]) -> Dict[str, List[str]]:
         if len(by_direction) > 1:
             all_edge_ids = [e["edge_id"] for e in group]
             for edge_id in all_edge_ids:
-                contradictions[edge_id] = [
-                    e["edge_id"] for e in group if e["edge_id"] != edge_id
-                ]
+                contradictions[edge_id] = [e["edge_id"] for e in group if e["edge_id"] != edge_id]
 
     return contradictions
 
 
-def apply_contradiction_status(graph: Dict, contradictions: Dict[str, List[str]]) -> None:
+def apply_contradiction_status(graph: dict, contradictions: dict[str, list[str]]) -> None:
     """
     Mark edges as disputed if they have contradictions.
     Only mark if not already reviewed (status != "accepted").
@@ -89,54 +93,50 @@ def apply_contradiction_status(graph: Dict, contradictions: Dict[str, List[str]]
             edge["contradicts_edge_ids"] = contradictions[edge_id]
             if edge.get("status") == "proposed":
                 edge["status"] = "disputed"
-                edge["review_rationale"] = (
-                    f"Contradicted by: {', '.join(contradictions[edge_id])}"
-                )
+                edge["review_rationale"] = f"Contradicted by: {', '.join(contradictions[edge_id])}"
 
 
-def main():
-    import argparse
+def mark_contradictions(graph: dict) -> dict[str, list[str]]:
+    """
+    Detect contradictions among the graph's edges and flag them in place.
 
-    parser = argparse.ArgumentParser(
-        description="Detect contradictory causal claims in graph"
-    )
-    parser.add_argument(
-        "--graph",
-        type=Path,
-        required=True,
-        help="Path to causal_graph.json",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("automation/processed/causal_graph_contradictions_marked.json"),
-        help="Output path with contradiction flags",
-    )
-
-    args = parser.parse_args()
-
-    with open(args.graph) as f:
-        graph = json.load(f)
-
-    edges = graph.get("edges", [])
-    contradictions = detect_contradictions(edges)
-
+    Returns the contradiction map ({edge_id: [contradicting_edge_ids]}). An empty map
+    means nothing was flagged and the graph is unchanged.
+    """
+    contradictions = detect_contradictions(graph.get("edges", []))
     if contradictions:
-        print(f"Found {len(contradictions)} contradictory edge(s):")
-        for edge_id, contradicts in contradictions.items():
-            print(f"  {edge_id} contradicts {contradicts}")
-
         apply_contradiction_status(graph, contradictions)
-    else:
-        print("No contradictions detected.")
+    return contradictions
 
-    output_path = args.output
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(graph, f, indent=2)
 
-    print(f"Graph with contradiction flags: {output_path}")
+def format_contradiction_report(contradictions: dict[str, list[str]]) -> list[str]:
+    """Human-readable report lines for a contradiction map."""
+    if not contradictions:
+        return ["No contradictions detected."]
+    lines = [f"Found {len(contradictions)} contradictory edge(s):"]
+    lines.extend(f"  {edge_id} contradicts {contradicts}" for edge_id, contradicts in contradictions.items())
+    return lines
+
+
+@app.command()
+def main(
+    graph: Annotated[Path, typer.Option("--graph", help="Path to causal_graph.json")],
+    output: Annotated[Path, typer.Option("--output", help="Output path with contradiction flags")] = DEFAULT_OUTPUT,
+) -> None:
+    """Flag contradictory causal claims in a graph and write the marked graph."""
+    with open(graph) as f:
+        data = json.load(f)
+
+    contradictions = mark_contradictions(data)
+    for line in format_contradiction_report(contradictions):
+        typer.echo(line)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with open(output, "w") as f:
+        json.dump(data, f, indent=2)
+
+    typer.echo(f"Graph with contradiction flags: {output}")
 
 
 if __name__ == "__main__":
-    main()
+    app()
