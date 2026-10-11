@@ -11,21 +11,28 @@ Output files:
 """
 
 import json
-import sys
-from pathlib import Path
-from typing import Dict, List, Any
 from collections import defaultdict
+from glob import glob
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+app = typer.Typer(help="Build causal graph from evidence", add_completion=False, pretty_exceptions_enable=False)
+
+DEFAULT_OUTPUT = Path("automation/processed/causal_graph.json")
+DEFAULT_MERMAID = Path("automation/processed/causal_graph.mmd")
 
 
 class CausalGraphBuilder:
     """Build and manage causal evidence graph."""
 
     def __init__(self):
-        self.papers: Dict[str, Dict] = {}
-        self.edges: Dict[str, Dict] = {}  # edge_id → edge data
+        self.papers: dict[str, dict] = {}
+        self.edges: dict[str, dict] = {}  # edge_id → edge data
         self.edge_counter = 0
 
-    def load_evidence(self, extraction_files: List[Path]) -> None:
+    def load_evidence(self, extraction_files: list[Path]) -> None:
         """Load causal claims from all papers."""
         for filepath in extraction_files:
             with open(filepath) as f:
@@ -37,7 +44,7 @@ class CausalGraphBuilder:
     def merge_edges(self) -> None:
         """Merge causal claims from all papers into graph edges."""
         # Group claims by (cause, effect, mechanism)
-        edge_groups: Dict[tuple, List[dict]] = defaultdict(list)
+        edge_groups: dict[tuple, list[dict]] = defaultdict(list)
 
         for paper_id, evidence in self.papers.items():
             for claim in evidence.get("causal_claims", []):
@@ -74,10 +81,7 @@ class CausalGraphBuilder:
                 "supporting_papers": [p for p, _ in supporting_claims],
                 "supporting_claims": len(supporting_claims),
                 "evidence_designs": list(set(evidence_designs)),
-                "causal_confidence_votes": dict(zip(
-                    confidences,
-                    [confidences.count(c) for c in confidences]
-                )),
+                "causal_confidence_votes": dict(zip(confidences, [confidences.count(c) for c in confidences])),
                 "consensus_confidence": self._consensus_confidence(confidences),
                 "status": "proposed",
                 "review_status": "pending",
@@ -87,13 +91,12 @@ class CausalGraphBuilder:
                 "rationale": None,
             }
 
-    def _consensus_confidence(self, confidences: List[str]) -> str:
+    def _consensus_confidence(self, confidences: list[str]) -> str:
         """Determine consensus confidence from votes."""
         if not confidences:
             return "low"
         high = confidences.count("high")
         medium = confidences.count("medium")
-        low = confidences.count("low")
 
         if high >= len(confidences) * 0.7:
             return "high"
@@ -120,7 +123,7 @@ class CausalGraphBuilder:
 
         print(f"\n✅ Causal graph exported: {output_path}")
         print(f"   Total edges: {len(self.edges)}")
-        print(f"   Proposed → Pending review")
+        print("   Proposed → Pending review")
 
     def export_mermaid(self, output_path: Path) -> None:
         """Export graph as Mermaid diagram for visualization."""
@@ -137,13 +140,6 @@ class CausalGraphBuilder:
             mechanism = edge.get("mechanism", "")
             confidence = edge["consensus_confidence"]
 
-            # Style by confidence
-            style_map = {
-                "high": "stroke:#2ecc71",
-                "medium": "stroke:#f39c12",
-                "low": "stroke:#e74c3c",
-            }
-
             label = f"{mechanism} ({confidence})" if mechanism else f"({confidence})"
             lines.append(f"{source} -->|{label}| {target}")
 
@@ -154,49 +150,46 @@ class CausalGraphBuilder:
         print(f"   Mermaid diagram: {output_path}")
 
 
-def main():
-    """Main entry point."""
-    import argparse
-    from glob import glob
+class NoExtractionsError(ValueError):
+    """The extraction pattern matched no files."""
 
-    parser = argparse.ArgumentParser(description="Build causal graph from evidence")
-    parser.add_argument(
-        "--extractions",
-        type=str,
-        required=True,
-        help="Pattern for extraction JSON files (e.g., automation/extracted_evidence/*.json)",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("automation/processed/causal_graph.json"),
-        help="Output path for causal graph",
-    )
-    parser.add_argument(
-        "--mermaid",
-        type=Path,
-        default=Path("automation/processed/causal_graph.mmd"),
-        help="Output path for Mermaid diagram",
-    )
 
-    args = parser.parse_args()
+def collect_extraction_files(pattern: str) -> list[Path]:
+    """Expand a glob pattern into extraction files. Raises NoExtractionsError when nothing matches."""
+    files = [Path(f) for f in glob(pattern)]
+    if not files:
+        raise NoExtractionsError(pattern)
+    return files
 
-    # Expand glob pattern
-    extraction_files = [Path(f) for f in glob(args.extractions)]
 
-    if not extraction_files:
-        print(f"❌ No extraction files found matching: {args.extractions}")
-        sys.exit(1)
+@app.command()
+def main(
+    extractions: Annotated[
+        str,
+        typer.Option(
+            "--extractions",
+            help="Pattern for extraction JSON files (e.g., automation/extracted_evidence/*.json)",
+        ),
+    ],
+    output: Annotated[Path, typer.Option("--output", help="Output path for causal graph")] = DEFAULT_OUTPUT,
+    mermaid: Annotated[Path, typer.Option("--mermaid", help="Output path for Mermaid diagram")] = DEFAULT_MERMAID,
+) -> None:
+    """Build a causal graph from extracted evidence."""
+    try:
+        extraction_files = collect_extraction_files(extractions)
+    except NoExtractionsError as exc:
+        typer.echo(f"❌ No extraction files found matching: {exc}")
+        raise typer.Exit(code=1) from exc
 
-    print(f"📊 Causal Graph Builder")
-    print(f"   Loading {len(extraction_files)} extraction files...")
+    typer.echo("📊 Causal Graph Builder")
+    typer.echo(f"   Loading {len(extraction_files)} extraction files...")
 
     builder = CausalGraphBuilder()
     builder.load_evidence(extraction_files)
     builder.merge_edges()
-    builder.export_graph(args.output)
-    builder.export_mermaid(args.mermaid)
+    builder.export_graph(output)
+    builder.export_mermaid(mermaid)
 
 
 if __name__ == "__main__":
-    main()
+    app()
