@@ -12,20 +12,26 @@ Usage:
 """
 
 import json
-import sys
-from pathlib import Path
-from typing import Dict, List, Any
 from collections import defaultdict
+from glob import glob
+from pathlib import Path
+from typing import Annotated, Any
+
+import typer
+
+app = typer.Typer(help="Synthesize evidence across papers", add_completion=False, pretty_exceptions_enable=False)
+
+DEFAULT_OUTPUT = Path("automation/processed/evidence_matrix.json")
 
 
 class EvidenceSynthesizer:
     """Synthesize evidence across papers into confidence scores."""
 
     def __init__(self):
-        self.papers: Dict[str, Dict] = {}
-        self.evidence_matrix: Dict[str, Any] = defaultdict(dict)
+        self.papers: dict[str, dict] = {}
+        self.evidence_matrix: dict[str, Any] = defaultdict(dict)
 
-    def load_evidence(self, extraction_files: List[Path]) -> None:
+    def load_evidence(self, extraction_files: list[Path]) -> None:
         """Load extracted evidence from JSON files."""
         for filepath in extraction_files:
             with open(filepath) as f:
@@ -34,7 +40,7 @@ class EvidenceSynthesizer:
             self.papers[paper_name] = evidence
             print(f"✅ Loaded: {paper_name}")
 
-    def synthesize_rq1(self) -> Dict[str, Any]:
+    def synthesize_rq1(self) -> dict[str, Any]:
         """RQ1: Is quantum-inspired + P-systems novel?"""
         supporting = []
         contradicting = []
@@ -57,7 +63,7 @@ class EvidenceSynthesizer:
             "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in supporting),
         }
 
-    def synthesize_rq2(self) -> Dict[str, Any]:
+    def synthesize_rq2(self) -> dict[str, Any]:
         """RQ2: What causes dimensionality collapse?"""
         discussing = []
         root_causes = defaultdict(int)
@@ -83,7 +89,7 @@ class EvidenceSynthesizer:
             "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in discussing),
         }
 
-    def synthesize_rq3(self) -> Dict[str, Any]:
+    def synthesize_rq3(self) -> dict[str, Any]:
         """RQ3: What adaptive strategies exist?"""
         all_mechanisms = defaultdict(int)
         supporting_papers = defaultdict(list)
@@ -105,7 +111,7 @@ class EvidenceSynthesizer:
             "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in self.papers.keys()),
         }
 
-    def synthesize_rq4(self) -> Dict[str, Any]:
+    def synthesize_rq4(self) -> dict[str, Any]:
         """RQ4: What's the GA baseline on CEC2017?"""
         baseline_papers = []
         all_baselines = defaultdict(list)
@@ -135,7 +141,7 @@ class EvidenceSynthesizer:
             "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in baseline_papers),
         }
 
-    def synthesize_rq5(self) -> Dict[str, Any]:
+    def synthesize_rq5(self) -> dict[str, Any]:
         """RQ5: Does QIPS scale to high-D?"""
         high_d_papers = []
         scalability_trends = defaultdict(int)
@@ -160,7 +166,7 @@ class EvidenceSynthesizer:
             "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in high_d_papers),
         }
 
-    def synthesize_all(self) -> Dict[str, Any]:
+    def synthesize_all(self) -> dict[str, Any]:
         """Synthesize all RQs into final evidence matrix."""
         return {
             "metadata": {
@@ -185,45 +191,47 @@ class EvidenceSynthesizer:
             json.dump(synthesis, f, indent=2)
         print(f"\n✅ Synthesis exported: {output_path}")
         print(f"   Papers analyzed: {synthesis['metadata']['total_papers']}")
-        for rq_key, rq_data in synthesis['evidence'].items():
+        for rq_key, rq_data in synthesis["evidence"].items():
             print(f"   {rq_key}: {rq_data['confidence']} confidence")
 
 
-def main():
-    """Main entry point."""
-    import argparse
-    from glob import glob
+class NoExtractionsError(ValueError):
+    """The extraction pattern matched no files."""
 
-    parser = argparse.ArgumentParser(description="Synthesize evidence across papers")
-    parser.add_argument(
-        "--extractions",
-        type=str,
-        required=True,
-        help="Pattern for extraction JSON files (e.g., automation/extracted_evidence/*.json)",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("automation/processed/evidence_matrix.json"),
-        help="Output path for synthesis",
-    )
 
-    args = parser.parse_args()
+def collect_extraction_files(pattern: str) -> list[Path]:
+    """Expand a glob pattern into extraction files. Raises NoExtractionsError when nothing matches."""
+    files = [Path(f) for f in glob(pattern)]
+    if not files:
+        raise NoExtractionsError(pattern)
+    return files
 
-    # Expand glob pattern
-    extraction_files = [Path(f) for f in glob(args.extractions)]
 
-    if not extraction_files:
-        print(f"❌ No extraction files found matching: {args.extractions}")
-        sys.exit(1)
+@app.command()
+def main(
+    extractions: Annotated[
+        str,
+        typer.Option(
+            "--extractions",
+            help="Pattern for extraction JSON files (e.g., automation/extracted_evidence/*.json)",
+        ),
+    ],
+    output: Annotated[Path, typer.Option("--output", help="Output path for synthesis")] = DEFAULT_OUTPUT,
+) -> None:
+    """Synthesize evidence across papers into a confidence-scored matrix."""
+    try:
+        extraction_files = collect_extraction_files(extractions)
+    except NoExtractionsError as exc:
+        typer.echo(f"❌ No extraction files found matching: {exc}")
+        raise typer.Exit(code=1) from exc
 
-    print(f"📊 Evidence Synthesizer")
-    print(f"   Loading {len(extraction_files)} extraction files...")
+    typer.echo("📊 Evidence Synthesizer")
+    typer.echo(f"   Loading {len(extraction_files)} extraction files...")
 
     synthesizer = EvidenceSynthesizer()
     synthesizer.load_evidence(extraction_files)
-    synthesizer.export(args.output)
+    synthesizer.export(output)
 
 
 if __name__ == "__main__":
-    main()
+    app()
