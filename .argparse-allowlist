@@ -1,3 +1,2 @@
 # Files that still import argparse. Convert each to Typer, then remove its line.
 scripts/experiment_spec_compiler.py
-scripts/validate_experiment_specs.py

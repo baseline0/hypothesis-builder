@@ -11,9 +11,18 @@ Exit codes:
 """
 
 import json
-import sys
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Annotated, Any
+
+import typer
+
+app = typer.Typer(
+    help="Validate experiment specifications for membrane ingestion. Enforces schema compliance and business rule checks.",
+    add_completion=False,
+    pretty_exceptions_enable=False,
+)
+
+DEFAULT_SPECS = Path("synthesis/experiment_specs.json")
 
 
 class ExperimentSpecValidator:
@@ -25,8 +34,8 @@ class ExperimentSpecValidator:
         """Load specs from JSON file."""
         with open(specs_path) as f:
             self.specs = json.load(f)
-        self.errors: List[str] = []
-        self.warnings: List[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
 
     def validate(self) -> bool:
         """
@@ -53,9 +62,7 @@ class ExperimentSpecValidator:
         """Check schema version matches expected version."""
         schema = self.specs.get("schema_version")
         if schema != self.SCHEMA_VERSION:
-            self.errors.append(
-                f"Invalid schema_version: '{schema}' (expected '{self.SCHEMA_VERSION}')"
-            )
+            self.errors.append(f"Invalid schema_version: '{schema}' (expected '{self.SCHEMA_VERSION}')")
 
     def _validate_export_structure(self) -> None:
         """Check top-level export structure."""
@@ -68,19 +75,15 @@ class ExperimentSpecValidator:
         total = self.specs.get("total_experiments", 0)
         actual = len(self.specs.get("experiments", []))
         if total != actual:
-            self.errors.append(
-                f"total_experiments mismatch: declared {total}, actual {actual}"
-            )
+            self.errors.append(f"total_experiments mismatch: declared {total}, actual {actual}")
 
-    def _validate_experiment(self, exp: Dict[str, Any], index: int) -> None:
+    def _validate_experiment(self, exp: dict[str, Any], index: int) -> None:
         """Validate a single experiment specification."""
         exp_id = exp.get("id") or exp.get("experiment_id") or f"exp_{index:04d}"
 
         # Schema version check
         if exp.get("schema_version") != self.SCHEMA_VERSION:
-            self.errors.append(
-                f"{exp_id}: schema_version mismatch (expected {self.SCHEMA_VERSION})"
-            )
+            self.errors.append(f"{exp_id}: schema_version mismatch (expected {self.SCHEMA_VERSION})")
 
         # Status check
         if exp.get("status") not in ["validated", "accepted", "pending"]:
@@ -93,7 +96,7 @@ class ExperimentSpecValidator:
         self._validate_provenance(exp, exp_id)
         self._validate_causal_claim(exp, exp_id)
 
-    def _validate_estimand(self, exp: Dict[str, Any], exp_id: str) -> None:
+    def _validate_estimand(self, exp: dict[str, Any], exp_id: str) -> None:
         """Validate estimand section."""
         estimand = exp.get("estimand")
         if not estimand:
@@ -132,15 +135,13 @@ class ExperimentSpecValidator:
             outcome_var = outcome.get("variable") if isinstance(outcome, dict) else None
 
             if treatment_var and outcome_var and treatment_var == outcome_var:
-                self.errors.append(
-                    f"{exp_id}: treatment and outcome cannot be the same variable"
-                )
+                self.errors.append(f"{exp_id}: treatment and outcome cannot be the same variable")
 
         # Other estimand fields
         if not estimand.get("population"):
             self.warnings.append(f"{exp_id}: estimand.population not specified")
 
-    def _validate_design(self, exp: Dict[str, Any], exp_id: str) -> None:
+    def _validate_design(self, exp: dict[str, Any], exp_id: str) -> None:
         """Validate design section."""
         design = exp.get("design")
         if not design:
@@ -160,7 +161,7 @@ class ExperimentSpecValidator:
         elif len(controls) == 0:
             self.errors.append(f"{exp_id}: design.design_controls is empty")
 
-    def _validate_analysis(self, exp: Dict[str, Any], exp_id: str) -> None:
+    def _validate_analysis(self, exp: dict[str, Any], exp_id: str) -> None:
         """Validate analysis section."""
         analysis = exp.get("analysis")
         if not analysis:
@@ -178,7 +179,7 @@ class ExperimentSpecValidator:
         if "summary" not in analysis:
             self.warnings.append(f"{exp_id}: analysis.summary not specified")
 
-    def _validate_provenance(self, exp: Dict[str, Any], exp_id: str) -> None:
+    def _validate_provenance(self, exp: dict[str, Any], exp_id: str) -> None:
         """Validate provenance section (source traceability)."""
         provenance = exp.get("provenance")
         if not provenance:
@@ -194,7 +195,7 @@ class ExperimentSpecValidator:
             if not provenance.get(field):
                 self.errors.append(f"{exp_id}: provenance.{field} missing")
 
-    def _validate_causal_claim(self, exp: Dict[str, Any], exp_id: str) -> None:
+    def _validate_causal_claim(self, exp: dict[str, Any], exp_id: str) -> None:
         """Validate causal_claim section."""
         claim = exp.get("causal_claim")
         if not claim:
@@ -216,9 +217,7 @@ class ExperimentSpecValidator:
         if mechanism_status:
             valid_status = ["known", "hypothesized", "unknown"]
             if mechanism_status not in valid_status:
-                self.errors.append(
-                    f"{exp_id}: causal_claim.mechanism_status '{mechanism_status}' invalid"
-                )
+                self.errors.append(f"{exp_id}: causal_claim.mechanism_status '{mechanism_status}' invalid")
 
     def report(self) -> None:
         """Print validation report to stdout."""
@@ -252,38 +251,37 @@ class ExperimentSpecValidator:
         print("=" * 60)
 
 
-def main():
-    """Main entry point."""
-    import argparse
+def specs_missing_message(specs_path: Path) -> list[str] | None:
+    """Error lines when the specs file does not exist, otherwise None."""
+    if specs_path.exists():
+        return None
+    return [
+        f"ERROR: Specs file not found: {specs_path}",
+        "First run: python scripts/experiment_spec_compiler.py --graph <graph.json>",
+    ]
 
-    parser = argparse.ArgumentParser(
-        description="Validate experiment specifications for membrane ingestion",
-        epilog="Enforces schema compliance and business rule checks.",
-    )
-    parser.add_argument(
-        "specs_path",
-        type=Path,
-        nargs="?",
-        default=Path("synthesis/experiment_specs.json"),
-        help="Path to experiment_specs.json (default: synthesis/experiment_specs.json)",
-    )
 
-    args = parser.parse_args()
+@app.command()
+def main(
+    specs_path: Annotated[
+        Path,
+        typer.Argument(help="Path to experiment_specs.json (default: synthesis/experiment_specs.json)"),
+    ] = DEFAULT_SPECS,
+) -> None:
+    """Validate experiment specifications for membrane ingestion."""
+    problem = specs_missing_message(specs_path)
+    if problem is not None:
+        for line in problem:
+            typer.echo(line)
+        raise typer.Exit(code=1)
 
-    # Check file exists
-    if not args.specs_path.exists():
-        print(f"ERROR: Specs file not found: {args.specs_path}")
-        print("First run: python scripts/experiment_spec_compiler.py --graph <graph.json>")
-        sys.exit(1)
-
-    # Validate
-    validator = ExperimentSpecValidator(args.specs_path)
+    validator = ExperimentSpecValidator(specs_path)
     valid = validator.validate()
     validator.report()
 
-    # Exit with appropriate code
-    sys.exit(0 if valid else 1)
+    if not valid:
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
-    main()
+    app()
