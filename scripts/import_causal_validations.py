@@ -18,12 +18,21 @@ Usage:
         --output automation/processed/causal_graph_validated.json
 """
 
-import json
-import sys
 import hashlib
-from pathlib import Path
-from typing import Dict, Any, List
+import json
 from datetime import datetime
+from pathlib import Path
+from typing import Annotated, Any
+
+import typer
+
+app = typer.Typer(
+    help="Import human review decisions into causal graph. Binds decisions to graph version via hash.",
+    add_completion=False,
+    pretty_exceptions_enable=False,
+)
+
+DEFAULT_OUTPUT = Path("automation/processed/causal_graph_validated.json")
 
 
 def canonical_json(obj: Any) -> bytes:
@@ -36,13 +45,10 @@ def canonical_json(obj: Any) -> bytes:
     ).encode("utf-8")
 
 
-def compute_graph_hash(graph: Dict[str, Any]) -> str:
+def compute_graph_hash(graph: dict[str, Any]) -> str:
     """Compute canonical SHA256 hash of graph (without metadata)."""
     # Exclude compiler-added metadata from hash
-    clean_graph = {
-        k: v for k, v in graph.items()
-        if k not in ["hash", "hash_metadata", "validated_at"]
-    }
+    clean_graph = {k: v for k, v in graph.items() if k not in ["hash", "hash_metadata", "validated_at"]}
     return hashlib.sha256(canonical_json(clean_graph)).hexdigest()
 
 
@@ -56,8 +62,8 @@ class ValidationImporter:
             self.graph = json.load(f)
 
         self.graph_hash = compute_graph_hash(self.graph)
-        self.validations: List[Dict] = []
-        self.validation_errors: List[str] = []
+        self.validations: list[dict] = []
+        self.validation_errors: list[str] = []
 
         # Load validation records
         with open(validations_path) as f:
@@ -68,9 +74,7 @@ class ValidationImporter:
                     record = json.loads(line)
                     self.validations.append(record)
                 except json.JSONDecodeError as e:
-                    self.validation_errors.append(
-                        f"Line {line_no}: Invalid JSON: {e}"
-                    )
+                    self.validation_errors.append(f"Line {line_no}: Invalid JSON: {e}")
 
     def validate_records(self) -> bool:
         """Validate all review records before applying."""
@@ -80,7 +84,7 @@ class ValidationImporter:
 
         return len(self.validation_errors) == 0
 
-    def _validate_record(self, record: Dict, index: int) -> List[str]:
+    def _validate_record(self, record: dict, index: int) -> list[str]:
         """Validate a single review record."""
         errors = []
         prefix = f"Validation {index}:"
@@ -101,8 +105,7 @@ class ValidationImporter:
         # Decision validity
         if record.get("decision") not in self.VALID_DECISIONS:
             errors.append(
-                f"{prefix} invalid decision '{record.get('decision')}'. "
-                f"Must be one of: {self.VALID_DECISIONS}"
+                f"{prefix} invalid decision '{record.get('decision')}'. Must be one of: {self.VALID_DECISIONS}"
             )
 
         # Edge existence
@@ -118,10 +121,7 @@ class ValidationImporter:
             errors.append(f"{prefix} malformed timestamp: {record.get('reviewed_at')}")
 
         # Check for duplicate validations of same edge
-        same_edge = [
-            r for r in self.validations[:index]
-            if r.get("edge_id") == edge_id
-        ]
+        same_edge = [r for r in self.validations[:index] if r.get("edge_id") == edge_id]
         if same_edge:
             errors.append(
                 f"{prefix} duplicate validation for edge_id '{edge_id}' "
@@ -179,51 +179,37 @@ class ValidationImporter:
         print(f"  Validations applied: {len(self.validations)}")
 
 
-def main():
-    """Main entry point."""
-    import argparse
+def input_problem(validations_path: Path, graph_path: Path) -> str | None:
+    """First missing input as an error message (validations are checked first), otherwise None."""
+    if not validations_path.exists():
+        return f"ERROR: Validations file not found: {validations_path}"
+    if not graph_path.exists():
+        return f"ERROR: Graph file not found: {graph_path}"
+    return None
 
-    parser = argparse.ArgumentParser(
-        description="Import human review decisions into causal graph",
-        epilog="Binds decisions to graph version via hash; prevents manual edits.",
-    )
-    parser.add_argument(
-        "--validations",
-        type=Path,
-        required=True,
-        help="Path to causal_validations.jsonl (one decision per line)",
-    )
-    parser.add_argument(
-        "--graph",
-        type=Path,
-        required=True,
-        help="Path to causal_graph.json",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("automation/processed/causal_graph_validated.json"),
-        help="Output path for validated graph",
-    )
 
-    args = parser.parse_args()
+@app.command()
+def main(
+    validations: Annotated[
+        Path, typer.Option("--validations", help="Path to causal_validations.jsonl (one decision per line)")
+    ],
+    graph: Annotated[Path, typer.Option("--graph", help="Path to causal_graph.json")],
+    output: Annotated[Path, typer.Option("--output", help="Output path for validated graph")] = DEFAULT_OUTPUT,
+) -> None:
+    """Import human review decisions into causal graph. Binds decisions to graph version via hash."""
+    problem = input_problem(validations, graph)
+    if problem is not None:
+        typer.echo(problem)
+        raise typer.Exit(code=1)
 
-    if not args.validations.exists():
-        print(f"ERROR: Validations file not found: {args.validations}")
-        sys.exit(1)
-
-    if not args.graph.exists():
-        print(f"ERROR: Graph file not found: {args.graph}")
-        sys.exit(1)
-
-    print("Importing causal validations...")
-    importer = ValidationImporter(args.graph, args.validations)
+    typer.echo("Importing causal validations...")
+    importer = ValidationImporter(graph, validations)
 
     if not importer.apply_validations():
-        sys.exit(1)
+        raise typer.Exit(code=1)
 
-    importer.export(args.output)
+    importer.export(output)
 
 
 if __name__ == "__main__":
-    main()
+    app()
