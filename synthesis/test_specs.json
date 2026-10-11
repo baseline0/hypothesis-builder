@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0.0",
+  "export_version": "1.0.0",
+  "protocol_version": "qips-2026-09-18",
+  "total_experiments": 1,
+  "experiments": [
+    {
+      "schema_version": "1.0.0",
+      "experiment_id": "exp_0000",
+      "hypothesis_id": "H_causal_exp_0000",
+      "source_edge_id": "edge_0001",
+      "status": "validated",
+      "causal_claim": {
+        "cause": "diversity_mechanism",
+        "effect": "final_fitness",
+        "mechanism": "entropy increases",
+        "mechanism_status": "known",
+        "direction": "increases",
+        "consensus_confidence": "high",
+        "supporting_papers": [
+          "paper_1"
+        ],
+        "reviewer": "test_user",
+        "reviewed_at": "2026-09-18T10:00:00Z"
+      },
+      "estimand": {
+        "name": "effect_of_diversity_mechanism_on_final_fitness",
+        "treatment": {
+          "variable": "diversity_mechanism",
+          "levels": [
+            "disabled",
+            "enabled"
+          ],
+          "manipulable": true
+        },
+        "outcome": {
+          "variable": "final_fitness",
+          "metric": "best_fitness_of_run",
+          "direction": "increases"
+        },
+        "population": "CEC2017 benchmark",
+        "time_horizon": "200 generations"
+      },
+      "design": {
+        "design_type": "controlled_benchmark_experiment",
+        "factors": [],
+        "replicates": 30,
+        "design_controls": {
+          "evaluation_budget": "held_constant",
+          "dimension": "stratified"
+        }
+      },
+      "analysis": {
+        "primary_outcome": "final_fitness",
+        "unit": "run",
+        "summary": "median_and_iqr",
+        "uncertainty": "bootstrap_ci"
+      },
+      "provenance": {
+        "source_paper": "paper_1",
+        "source_page": 42,
+        "source_quote": "A diversity mechanism increases fitness",
+        "edge_id": "edge_0001",
+        "reviewer": "test_user",
+        "reviewed_at": "2026-09-18T10:00:00Z"
+      }
+    }
+  ]
+}
