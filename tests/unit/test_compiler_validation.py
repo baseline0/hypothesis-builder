@@ -17,12 +17,14 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 # Add scripts to path
 from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from experiment_spec_compiler import ExperimentSpecCompiler
+from experiment_spec_compiler import ExperimentSpecCompiler, NoCompilableEdgesError
 
 
 def create_fixture_graph(edges_list):
@@ -67,11 +69,8 @@ def test_proposed_edge_rejected():
         compiler = ExperimentSpecCompiler(graph_path)
 
         # Should exit with error (proposed edge rejected)
-        try:
+        with pytest.raises(NoCompilableEdgesError):
             compiler.build_experiment_specs()
-            assert False, "Expected SystemExit but compiled succeeded"
-        except SystemExit as e:
-            assert e.code == 1, f"Expected exit code 1, got {e.code}"
 
     print("PASS: test_proposed_edge_rejected")
 
@@ -105,11 +104,8 @@ def test_rejected_edge_rejected():
 
         compiler = ExperimentSpecCompiler(graph_path)
 
-        try:
+        with pytest.raises(NoCompilableEdgesError):
             compiler.build_experiment_specs()
-            assert False, "Expected SystemExit"
-        except SystemExit as e:
-            assert e.code == 1
 
     print("PASS: test_rejected_edge_rejected")
 
@@ -143,11 +139,8 @@ def test_accepted_without_reviewer_rejected():
 
         compiler = ExperimentSpecCompiler(graph_path)
 
-        try:
+        with pytest.raises(NoCompilableEdgesError):
             compiler.build_experiment_specs()
-            assert False, "Expected SystemExit"
-        except SystemExit as e:
-            assert e.code == 1
 
     print("PASS: test_accepted_without_reviewer_rejected")
 
@@ -181,11 +174,8 @@ def test_accepted_without_provenance_rejected():
 
         compiler = ExperimentSpecCompiler(graph_path)
 
-        try:
+        with pytest.raises(NoCompilableEdgesError):
             compiler.build_experiment_specs()
-            assert False, "Expected SystemExit"
-        except SystemExit as e:
-            assert e.code == 1
 
     print("PASS: test_accepted_without_provenance_rejected")
 

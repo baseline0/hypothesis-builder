@@ -31,10 +31,26 @@ Contract properties:
 """
 
 import json
-import sys
 from pathlib import Path
-from typing import Dict, List, Any
-from collections import defaultdict
+from typing import Annotated, Any
+
+import typer
+
+app = typer.Typer(
+    help="Compile experiment specs from validated causal graph. Only accepted, reviewed, complete edges compile.",
+    add_completion=False,
+    pretty_exceptions_enable=False,
+)
+
+DEFAULT_OUTPUT = Path("synthesis/experiment_specs.json")
+
+
+class NoCompilableEdgesError(Exception):
+    """No accepted edge could be compiled. `lines` is the report to show the user."""
+
+    def __init__(self, lines: list[str]):
+        super().__init__("\n".join(lines))
+        self.lines = lines
 
 
 class ExperimentSpecCompiler:
@@ -45,30 +61,33 @@ class ExperimentSpecCompiler:
     def __init__(self, causal_graph_path: Path):
         with open(causal_graph_path) as f:
             self.graph = json.load(f)
-        self.experiments: Dict[str, Dict] = {}
+        self.experiments: dict[str, dict] = {}
         self.experiment_counter = 0
 
-    def build_experiment_specs(self) -> None:
+    def build_experiment_specs(self) -> list[tuple]:
         """
         Generate experiment specs from accepted causal edges.
 
         Enforces strict validation: only edges with status='accepted' AND complete
         provenance AND reviewer information are compiled. Proposed, rejected, or
-        incomplete edges are logged and skipped.
+        incomplete edges are skipped and returned as (edge_id, reason) pairs.
 
-        Raises SystemExit with nonzero status if no valid edges found.
+        Raises NoCompilableEdgesError (with the report lines) if no valid edges found.
         """
         all_edges = self.graph["edges"]
         accepted_edges = [e for e in all_edges if e.get("status") == "accepted"]
 
         if not accepted_edges:
-            print(f"ERROR: No accepted edges found (total edges: {len(all_edges)})")
-            print("   Valid edges must have status='accepted'. Exiting.")
-            sys.exit(1)
+            raise NoCompilableEdgesError(
+                [
+                    f"ERROR: No accepted edges found (total edges: {len(all_edges)})",
+                    "   Valid edges must have status='accepted'. Exiting.",
+                ]
+            )
 
         # Validate and compile each edge
         valid_count = 0
-        invalid_edges = []
+        invalid_edges: list[tuple] = []
 
         for edge in accepted_edges:
             try:
@@ -79,17 +98,14 @@ class ExperimentSpecCompiler:
                 invalid_edges.append((edge.get("edge_id"), str(e)))
 
         if not valid_count:
-            print(f"ERROR: All {len(accepted_edges)} accepted edges failed validation:")
-            for edge_id, reason in invalid_edges:
-                print(f"   {edge_id}: {reason}")
-            sys.exit(1)
+            raise NoCompilableEdgesError(
+                [f"ERROR: All {len(accepted_edges)} accepted edges failed validation:"]
+                + [f"   {edge_id}: {reason}" for edge_id, reason in invalid_edges]
+            )
 
-        if invalid_edges:
-            print(f"WARNING: {len(invalid_edges)} edges failed validation (skipped):")
-            for edge_id, reason in invalid_edges:
-                print(f"   {edge_id}: {reason}")
+        return invalid_edges
 
-    def _validate_edge(self, edge: Dict[str, Any]) -> None:
+    def _validate_edge(self, edge: dict[str, Any]) -> None:
         """
         Validate that edge meets all requirements for compilation.
 
@@ -149,7 +165,7 @@ class ExperimentSpecCompiler:
         if not supporting or not isinstance(supporting, list):
             raise ValueError("supporting_papers must be non-empty list")
 
-    def _build_spec_from_edge(self, edge: Dict[str, Any]) -> None:
+    def _build_spec_from_edge(self, edge: dict[str, Any]) -> None:
         """Build experiment spec from validated causal edge."""
         exp_id = f"exp_{self.experiment_counter:04d}"
         self.experiment_counter += 1
@@ -160,7 +176,6 @@ class ExperimentSpecCompiler:
             "hypothesis_id": f"H_causal_{exp_id}",
             "source_edge_id": edge["edge_id"],
             "status": "validated",
-
             "causal_claim": {
                 "cause": edge["cause"],
                 "effect": edge["effect"],
@@ -172,7 +187,6 @@ class ExperimentSpecCompiler:
                 "reviewer": edge.get("reviewer"),
                 "reviewed_at": edge.get("reviewed_at"),
             },
-
             "estimand": {
                 "name": f"effect_of_{edge['cause']}_on_{edge['effect']}",
                 "treatment": {
@@ -196,7 +210,6 @@ class ExperimentSpecCompiler:
                     "No interference: algorithm choice does not affect others",
                 ],
             },
-
             "design": {
                 "design_type": "controlled_benchmark_experiment",
                 "factors": self._build_factorial_design(edge),
@@ -208,7 +221,6 @@ class ExperimentSpecCompiler:
                     "random_seed": "blocked",
                 },
             },
-
             "analysis": {
                 "primary_outcome": edge["effect"],
                 "unit": "run",
@@ -219,7 +231,6 @@ class ExperimentSpecCompiler:
                 "stopping_rule": "fixed_replicates",
                 "multiple_comparison_handling": "none (single primary outcome)",
             },
-
             "measurements": {
                 "primary": [
                     {
@@ -235,21 +246,20 @@ class ExperimentSpecCompiler:
                         "collection_point": "every_10_generations",
                         "mechanism_status": edge.get("mechanism_status", "unknown"),
                     }
-                ] if edge.get("mechanism_status") != "unknown" else [],
+                ]
+                if edge.get("mechanism_status") != "unknown"
+                else [],
                 "effect_modifiers": [
                     {"variable": "dimension", "levels": ["10", "30", "50"]},
                     {"variable": "function_class", "levels": ["unimodal", "multimodal", "hybrid", "composition"]},
                 ],
             },
-
             "predictions": self._build_predictions(edge),
-
             "falsification_criteria": [
                 f"If {edge['cause']} does not change {edge['effect']} in predicted direction, hypothesis falsified",
                 "If mediator measurement shows no change despite outcome change, mechanism incorrect",
                 "If effect exists only on narrow function subset, generalizability limited",
             ],
-
             "provenance": {
                 "source_paper": edge["source"]["paper_id"],
                 "source_page": edge["source"]["page"],
@@ -262,7 +272,7 @@ class ExperimentSpecCompiler:
 
         self.experiments[exp_id] = spec
 
-    def _infer_treatment_levels(self, cause: str) -> List[str]:
+    def _infer_treatment_levels(self, cause: str) -> list[str]:
         """Infer treatment levels for a causal variable."""
         level_map = {
             "diversity_mechanism": ["disabled", "enabled"],
@@ -295,7 +305,7 @@ class ExperimentSpecCompiler:
         }
         return metric_map.get(outcome, f"measure_{outcome}")
 
-    def _build_factorial_design(self, edge: Dict) -> List[Dict]:
+    def _build_factorial_design(self, edge: dict) -> list[dict]:
         """Build factorial design factors."""
         factors = [
             {
@@ -313,7 +323,7 @@ class ExperimentSpecCompiler:
         ]
         return factors
 
-    def _build_predictions(self, edge: Dict[str, Any]) -> List[str]:
+    def _build_predictions(self, edge: dict[str, Any]) -> list[str]:
         """Build testable predictions from causal edge."""
         cause = edge["cause"]
         effect = edge["effect"]
@@ -321,8 +331,8 @@ class ExperimentSpecCompiler:
 
         predictions = [
             f"Enabling {cause} will {direction} {effect}",
-            f"Effect is larger on multimodal functions than unimodal",
-            f"Effect persists as dimension increases (D=10,30,50)",
+            "Effect is larger on multimodal functions than unimodal",
+            "Effect persists as dimension increases (D=10,30,50)",
         ]
 
         if edge.get("mechanism_status") in ["known", "hypothesized"]:
@@ -350,7 +360,7 @@ class ExperimentSpecCompiler:
         # Try to get git commit (for reproducibility)
         try:
             commit = os.popen("git rev-parse HEAD 2>/dev/null").read().strip()
-        except:
+        except Exception:
             commit = "unknown"
 
         specs = {
@@ -386,43 +396,47 @@ class ExperimentSpecCompiler:
         print(f"   Generator commit: {commit[:8] if commit != 'unknown' else 'unknown'}")
         print(f"   Total experiments: {len(self.experiments)}")
         print(f"   Graph hash: {graph_hash[:16]}...")
-        print(f"   Status: Ready for membrane integration")
+        print("   Status: Ready for membrane integration")
 
 
-def main():
-    """Main entry point."""
-    import argparse
+def graph_missing_message(graph_path: Path) -> str | None:
+    """Error message when the causal graph file does not exist, otherwise None."""
+    if graph_path.exists():
+        return None
+    return f"ERROR: Causal graph not found: {graph_path}"
 
-    parser = argparse.ArgumentParser(
-        description="Compile experiment specs from validated causal graph",
-        epilog="Enforces strict validation: only accepted, reviewed, complete edges compile.",
-    )
-    parser.add_argument(
-        "--graph",
-        type=Path,
-        required=True,
-        help="Path to validated causal_graph.json",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("synthesis/experiment_specs.json"),
-        help="Output path for experiment specifications",
-    )
 
-    args = parser.parse_args()
+@app.command()
+def main(
+    graph: Annotated[Path, typer.Option("--graph", help="Path to validated causal_graph.json")],
+    output: Annotated[
+        Path, typer.Option("--output", help="Output path for experiment specifications")
+    ] = DEFAULT_OUTPUT,
+) -> None:
+    """Compile experiment specs from validated causal graph."""
+    problem = graph_missing_message(graph)
+    if problem is not None:
+        typer.echo(problem)
+        raise typer.Exit(code=1)
 
-    if not args.graph.exists():
-        print(f"ERROR: Causal graph not found: {args.graph}")
-        sys.exit(1)
+    typer.echo("Experiment Specification Compiler")
+    typer.echo(f"   Reading causal graph: {graph}")
 
-    print(f"Experiment Specification Compiler")
-    print(f"   Reading causal graph: {args.graph}")
+    compiler = ExperimentSpecCompiler(graph)
+    try:
+        skipped = compiler.build_experiment_specs()
+    except NoCompilableEdgesError as exc:
+        for line in exc.lines:
+            typer.echo(line)
+        raise typer.Exit(code=1) from exc
 
-    compiler = ExperimentSpecCompiler(args.graph)
-    compiler.build_experiment_specs()
-    compiler.export(args.output)
+    if skipped:
+        typer.echo(f"WARNING: {len(skipped)} edges failed validation (skipped):")
+        for edge_id, reason in skipped:
+            typer.echo(f"   {edge_id}: {reason}")
+
+    compiler.export(output)
 
 
 if __name__ == "__main__":
-    main()
+    app()
