@@ -18,6 +18,12 @@ repos:
         pass_filenames: false
         files: '\.py$'
         stages: [pre-commit]
+      - id: check-project-venv
+        name: "[P0] VIRTUAL_ENV must be this repo's .venv"
+        entry: bash ../fleet-base/scripts/check-project-venv.sh
+        language: system
+        pass_filenames: false
+        always_run: true
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.8
     hooks:
