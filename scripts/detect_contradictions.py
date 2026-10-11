@@ -17,7 +17,9 @@ from typing import Annotated
 
 import typer
 
-app = typer.Typer(help="Detect contradictory causal claims in graph", add_completion=False, pretty_exceptions_enable=False)
+app = typer.Typer(
+    help="Detect contradictory causal claims in graph", add_completion=False, pretty_exceptions_enable=False
+)
 
 DEFAULT_OUTPUT = Path("automation/processed/causal_graph_contradictions_marked.json")
 

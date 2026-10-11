@@ -18,7 +18,11 @@ from typing import Annotated
 
 import typer
 
-app = typer.Typer(help="Extract evidence from a paper (Claude reads the PDF in session)", add_completion=False, pretty_exceptions_enable=False)
+app = typer.Typer(
+    help="Extract evidence from a paper (Claude reads the PDF in session)",
+    add_completion=False,
+    pretty_exceptions_enable=False,
+)
 
 
 @dataclass

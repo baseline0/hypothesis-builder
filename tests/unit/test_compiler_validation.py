@@ -424,23 +424,37 @@ def test_golden_path_fixture():
             specs = json.load(f)
 
         # Should have 2 specs (A and B), not 3 (C rejected)
-        assert specs["total_experiments"] == 2, \
+        assert specs["total_experiments"] == 2, (
             f"Expected 2 specs (A and B compiled, C rejected), got {specs['total_experiments']}"
+        )
 
         # Verify both are present
         spec_ids = [s["experiment_id"] for s in specs["experiments"]]
         assert len(spec_ids) == 2
 
         # Verify A compiled
-        spec_a = next((s for s in specs["experiments"] if s["causal_claim"]["cause"] == "diversity_mechanism"
-                       and s["causal_claim"]["effect"] == "final_fitness"), None)
+        spec_a = next(
+            (
+                s
+                for s in specs["experiments"]
+                if s["causal_claim"]["cause"] == "diversity_mechanism"
+                and s["causal_claim"]["effect"] == "final_fitness"
+            ),
+            None,
+        )
         assert spec_a is not None, "Spec A (diversity → fitness) not found"
         assert spec_a["causal_claim"]["mechanism_status"] == "known"
         assert spec_a["provenance"]["source_paper"] == "paper_a_smith_2023"
 
         # Verify B compiled
-        spec_b = next((s for s in specs["experiments"] if s["causal_claim"]["cause"] == "diversity_mechanism"
-                       and s["causal_claim"]["effect"] == "runtime"), None)
+        spec_b = next(
+            (
+                s
+                for s in specs["experiments"]
+                if s["causal_claim"]["cause"] == "diversity_mechanism" and s["causal_claim"]["effect"] == "runtime"
+            ),
+            None,
+        )
         assert spec_b is not None, "Spec B (diversity → runtime) not found"
         assert spec_b["causal_claim"]["mechanism_status"] == "hypothesized"
         assert spec_b["provenance"]["source_paper"] == "paper_b_jones_2020"
