@@ -12,15 +12,15 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from pathlib import Path  # noqa: E402
+from pathlib import Path
 
-import pytest  # noqa: E402
-from causal_graph_builder import (  # noqa: E402
+import pytest
+from causal_graph_builder import (
     NoExtractionsError,
     app,
     collect_extraction_files,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 
 def _write_extraction(path: Path, paper: str) -> None:

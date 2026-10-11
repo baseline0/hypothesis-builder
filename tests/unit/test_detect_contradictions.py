@@ -12,8 +12,8 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-import pytest  # noqa: E402
-from detect_contradictions import (  # noqa: E402
+import pytest
+from detect_contradictions import (
     apply_contradiction_status,
     compute_claim_key,
     detect_contradictions,

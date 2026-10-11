@@ -13,8 +13,8 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-import pytest  # noqa: E402
-from evidence_extractor import (  # noqa: E402
+import pytest
+from evidence_extractor import (
     create_causal_claim_template,
     create_template_evidence,
     export_evidence,
@@ -28,7 +28,7 @@ BUILDER_REQUIRED_CLAIM_FIELDS = {"cause", "effect", "direction", "causal_confide
 def test_claim_template_provides_every_field_the_graph_builder_reads():
     template = create_causal_claim_template()
 
-    assert BUILDER_REQUIRED_CLAIM_FIELDS <= set(template)
+    assert set(template) >= BUILDER_REQUIRED_CLAIM_FIELDS
 
 
 def test_template_evidence_has_paper_level_fields():

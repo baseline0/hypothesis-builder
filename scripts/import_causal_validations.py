@@ -22,7 +22,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, ClassVar
 
 import typer
 
@@ -55,7 +55,7 @@ def compute_graph_hash(graph: dict[str, Any]) -> str:
 class ValidationImporter:
     """Import and apply causal validations to graph."""
 
-    VALID_DECISIONS = {"accepted", "rejected", "disputed", "requires_experiment"}
+    VALID_DECISIONS: ClassVar[set[str]] = {"accepted", "rejected", "disputed", "requires_experiment"}
 
     def __init__(self, graph_path: Path, validations_path: Path):
         with open(graph_path) as f:

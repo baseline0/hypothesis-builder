@@ -14,16 +14,16 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from pathlib import Path  # noqa: E402
+from pathlib import Path
 
-import pytest  # noqa: E402
-from experiment_spec_compiler import (  # noqa: E402
+import pytest
+from experiment_spec_compiler import (
     ExperimentSpecCompiler,
     NoCompilableEdgesError,
     app,
     graph_missing_message,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 GOOD_EDGE = {
     "edge_id": "edge_0001",

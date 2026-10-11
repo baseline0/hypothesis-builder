@@ -12,9 +12,9 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from pathlib import Path  # noqa: E402
+from pathlib import Path
 
-from evidence_extractor import (  # noqa: E402
+from evidence_extractor import (
     app,
     create_causal_claim_template,
     create_template_evidence,
@@ -22,7 +22,7 @@ from evidence_extractor import (  # noqa: E402
     render_template,
     session_banner,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 
 def test_render_template_is_the_evidence_template_as_json():

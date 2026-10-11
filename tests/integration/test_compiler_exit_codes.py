@@ -56,7 +56,7 @@ def test_no_accepted_edges_exits_1():
         with open(graph_path, "w") as f:
             json.dump(graph, f)
 
-        exit_code, stderr, stdout = run_compiler(graph_path, output_path)
+        exit_code, _stderr, _stdout = run_compiler(graph_path, output_path)
 
         assert exit_code == 1, f"Expected exit 1, got {exit_code}"
         assert not output_path.exists(), "Output file should not exist on failure"
@@ -194,7 +194,7 @@ def test_all_invalid_exits_1():
         with open(graph_path, "w") as f:
             json.dump(graph, f)
 
-        exit_code, stderr, stdout = run_compiler(graph_path, output_path)
+        exit_code, _stderr, _stdout = run_compiler(graph_path, output_path)
 
         # Should exit 1 because no valid edges exist
         assert exit_code == 1, f"Expected exit 1 (all invalid), got {exit_code}"

@@ -16,42 +16,50 @@ import tempfile
 import json
 from pathlib import Path
 
+
 def test_no_accepted_edges_exits_1():
     """No accepted edges → compiler exits 1."""
     graph = {
-        "edges": [{
-            "edge_id": "edge_0001",
-            "status": "proposed",  # not accepted
-            "cause": "X",
-            "effect": "Y",
-        }]
+        "edges": [
+            {
+                "edge_id": "edge_0001",
+                "status": "proposed",  # not accepted
+                "cause": "X",
+                "effect": "Y",
+            }
+        ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         graph_path = Path(tmpdir) / "graph.json"
         output_path = Path(tmpdir) / "specs.json"
-        
+
         with open(graph_path, "w") as f:
             json.dump(graph, f)
-        
+
         result = subprocess.run(
             [
-                "python", "scripts/experiment_spec_compiler.py",
-                "--graph", str(graph_path),
-                "--output", str(output_path),
+                "python",
+                "scripts/experiment_spec_compiler.py",
+                "--graph",
+                str(graph_path),
+                "--output",
+                str(output_path),
             ],
             cwd=".",
             capture_output=True,
         )
-        
+
         assert result.returncode == 1, f"Expected exit 1, got {result.returncode}"
         assert not output_path.exists(), "Output file should not exist on failure"
+
 
 def test_valid_edge_exits_0():
     """Valid accepted edge → compiler exits 0."""
     # Create complete valid edge and verify exit 0
     # (Similar structure, but with status="accepted", reviewer, etc.)
     pass
+
 
 def test_mixed_valid_invalid_exits_0():
     """Mixed valid/invalid → exit 0 with rejection report."""
@@ -143,10 +151,11 @@ def create_complete_fixture():
         },
     ]
 
+
 def test_enhanced_fixture():
     """Test all 10 fixture types."""
     edges = create_complete_fixture()
-    
+
     # Run through pipeline
     # Verify:
     # - Edges 1-8 compile (8 specs)
@@ -154,7 +163,7 @@ def test_enhanced_fixture():
     # - Edges 6-7 compile independently
     # - Edge 9 rejected (proposed)
     # - Edge 10 rejected (incomplete)
-    
+
     assert len(compiled_specs) == 8  # or adjust based on contradiction policy
 ```
 

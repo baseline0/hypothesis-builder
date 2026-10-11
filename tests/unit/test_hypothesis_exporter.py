@@ -13,12 +13,12 @@ from constants import REPO_ROOT
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 
-from hypothesis_exporter import (  # noqa: E402
+from hypothesis_exporter import (
     HypothesisExporter,
     app,
     evidence_missing_message,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 
 def _matrix() -> dict:

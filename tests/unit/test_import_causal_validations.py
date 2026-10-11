@@ -12,15 +12,15 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from pathlib import Path  # noqa: E402
+from pathlib import Path
 
-from import_causal_validations import (  # noqa: E402
+from import_causal_validations import (
     ValidationImporter,
     app,
     compute_graph_hash,
     input_problem,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 GRAPH = {"edges": [{"edge_id": "e1", "status": "proposed"}]}
 

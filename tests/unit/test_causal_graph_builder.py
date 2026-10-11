@@ -13,8 +13,8 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-import pytest  # noqa: E402
-from causal_graph_builder import CausalGraphBuilder  # noqa: E402
+import pytest
+from causal_graph_builder import CausalGraphBuilder
 
 
 def claim(cause="rain", effect="wet_ground", mechanism="", direction="positive", confidence="high", design="rct"):

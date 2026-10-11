@@ -13,14 +13,14 @@ from constants import REPO_ROOT
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 
-import pytest  # noqa: E402
-from evidence_synthesis import (  # noqa: E402
+import pytest
+from evidence_synthesis import (
     EvidenceSynthesizer,
     NoExtractionsError,
     app,
     collect_extraction_files,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 
 def _paper(name: str, **overrides) -> dict:

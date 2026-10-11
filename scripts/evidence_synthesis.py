@@ -108,7 +108,7 @@ class EvidenceSynthesizer:
             "finding": "Key adaptive strategies: " + ", ".join(sorted(all_mechanisms.keys())),
             "mechanisms": {m: {"count": c, "papers": supporting_papers[m]} for m, c in all_mechanisms.items()},
             "confidence": confidence,
-            "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in self.papers.keys()),
+            "quality_weighted_score": sum(self.papers[p].get("quality_total", 0) for p in self.papers),
         }
 
     def synthesize_rq4(self) -> dict[str, Any]:

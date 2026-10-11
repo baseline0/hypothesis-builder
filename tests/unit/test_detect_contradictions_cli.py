@@ -12,12 +12,12 @@ from constants import REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from detect_contradictions import (  # noqa: E402
+from detect_contradictions import (
     app,
     format_contradiction_report,
     mark_contradictions,
 )
-from typer.testing import CliRunner  # noqa: E402
+from typer.testing import CliRunner
 
 
 def _edge(edge_id: str, direction: str, status: str = "proposed") -> dict:

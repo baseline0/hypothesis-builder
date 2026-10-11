@@ -274,10 +274,10 @@ def test_enhanced_fixture_compilation():
         assert result.returncode == 1, f"Expected failure (invalid edges), got {result.returncode}"
 
         print("✓ Enhanced fixture test: Invalid edges correctly rejected")
-        print(f"  Edges 1-8: valid (should compile)")
-        print(f"  Edges 4-5: contradictory (marked disputed)")
-        print(f"  Edge 9: proposed (rejected)")
-        print(f"  Edge 10: missing reviewer (rejected)")
+        print("  Edges 1-8: valid (should compile)")
+        print("  Edges 4-5: contradictory (marked disputed)")
+        print("  Edge 9: proposed (rejected)")
+        print("  Edge 10: missing reviewer (rejected)")
 
 
 def test_valid_subset_only():
@@ -286,16 +286,21 @@ def test_valid_subset_only():
     import tempfile
 
     edges = create_10_type_fixture()
-    valid_edges = [e for e in edges if e["edge_id"] in [
-        "edge_1_accepted_known",
-        "edge_2_accepted_unknown",
-        "edge_3_low_confidence",
-        "edge_4_contradictory_a",
-        "edge_5_contradictory_b",
-        "edge_6_independent_1",
-        "edge_7_independent_2",
-        "edge_8_multi_source",
-    ]]
+    valid_edges = [
+        e
+        for e in edges
+        if e["edge_id"]
+        in [
+            "edge_1_accepted_known",
+            "edge_2_accepted_unknown",
+            "edge_3_low_confidence",
+            "edge_4_contradictory_a",
+            "edge_5_contradictory_b",
+            "edge_6_independent_1",
+            "edge_7_independent_2",
+            "edge_8_multi_source",
+        ]
+    ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
