@@ -1,8 +1,6 @@
 #!/usr/bin/env just --justfile
 
 # Shared commit recipe from fleet-base. Literal path: just does not interpolate variables into import paths.
-import "../fleet-base/src/fleet_base/justfiles/shared/commit.just"
-
 # Minimal fleet justfile. Recipes are grouped (see fleet-base/templates/justfile.template).
 # Run `just --list` to see every recipe.
 
@@ -18,8 +16,21 @@ test:
 
 # Pyright ratchet: fails when a file gains errors (scripts in fleet-base; mode from pyproject.toml).
 check-types:
-    uv run python ../fleet-base/scripts/pyright_ratchet.py check
+    fleet ratchet check
 
 # Unit tests: the gate the pre-push hook runs (fleet hook standard, fleet_base.hook_standard R4)
 test-unit:
     just test
+
+# ============================================================================
+# Shared fleet recipes, run by fleet-base's installed tool (uv tool install --editable ~/projects/fleet-base).
+# Each line calls `fleet recipe NAME`; define a recipe here instead to override it.
+# ============================================================================
+
+# Falls back to manual commit if Ollama unavailable or commitmate fails
+commit:
+    fleet recipe commit
+
+# Add all untracked files and commit with LLM or custom message
+commit-all:
+    fleet recipe commit-all
