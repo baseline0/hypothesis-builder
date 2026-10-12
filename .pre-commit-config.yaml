@@ -1,4 +1,8 @@
-
+default_stages:
+  - pre-commit
+default_install_hook_types:
+  - pre-commit
+  - pre-push
 repos:
   - repo: local
     hooks:
@@ -30,3 +34,13 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: just-test-unit
+        name: '[P0] Pre-push: just test-unit (unit tests)'
+        entry: env -u VIRTUAL_ENV just test-unit
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-push
