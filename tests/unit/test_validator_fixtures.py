@@ -3,10 +3,14 @@
 These files are hand-written inputs, so a change to the validator that flips an outcome should fail here.
 """
 
+import sys
+
 import pytest
-from validate_experiment_specs import ExperimentSpecValidator
 
 from constants import REPO_ROOT
+
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from validate_experiment_specs import ExperimentSpecValidator
 
 FIXTURES = REPO_ROOT / "tests" / "fixtures"
 
