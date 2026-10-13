@@ -37,3 +37,6 @@ htmlcov/
 
 # Local backlog: not versioned
 TODO.md
+
+# Python caches and environments (fleet standard)
+.ruff_cache/
