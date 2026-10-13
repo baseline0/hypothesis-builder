@@ -4,7 +4,9 @@ reference/lit_review/*.pdf
 # Automation outputs (regenerated on each run)
 automation/extracted_evidence/*.json
 automation/processed/*.json
-synthesis/hypotheses.json
+automation/processed/*.mmd
+# Synthesis outputs. Validator fixtures live in tests/fixtures/, not here.
+synthesis/*.json
 
 # Manual review artifacts
 manual/*.md
