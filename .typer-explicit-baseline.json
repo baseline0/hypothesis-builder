@@ -1,0 +1,22 @@
+{
+  "violations": [
+    "scripts/causal_graph_builder.py::main::extractions::optional-option",
+    "scripts/causal_graph_builder.py::main::mermaid::default",
+    "scripts/causal_graph_builder.py::main::output::default",
+    "scripts/detect_contradictions.py::main::graph::optional-option",
+    "scripts/detect_contradictions.py::main::output::default",
+    "scripts/evidence_extractor.py::main::causal_template::default",
+    "scripts/evidence_extractor.py::main::output::default",
+    "scripts/evidence_extractor.py::main::template::default",
+    "scripts/evidence_synthesis.py::main::extractions::optional-option",
+    "scripts/evidence_synthesis.py::main::output::default",
+    "scripts/experiment_spec_compiler.py::main::graph::optional-option",
+    "scripts/experiment_spec_compiler.py::main::output::default",
+    "scripts/hypothesis_exporter.py::main::evidence::optional-option",
+    "scripts/hypothesis_exporter.py::main::output::default",
+    "scripts/import_causal_validations.py::main::graph::optional-option",
+    "scripts/import_causal_validations.py::main::output::default",
+    "scripts/import_causal_validations.py::main::validations::optional-option",
+    "scripts/validate_experiment_specs.py::main::specs_path::positional"
+  ]
+}
