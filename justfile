@@ -4,6 +4,8 @@
 # Minimal fleet justfile. Recipes are grouped (see fleet-base/templates/justfile.template).
 # Run `just --list` to see every recipe.
 
+import 'just/fleet-clean.just'
+
 set shell := ["bash", "-c"]
 
 [group("dev")]
