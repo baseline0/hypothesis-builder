@@ -36,3 +36,8 @@ commit:
 # Add all untracked files and commit with LLM or custom message
 commit-all:
     fleet recipe --name commit-all
+
+# Lint and type check through the fleet gate (ruff, then the pyright ratchet).
+check:
+    uv run ruff check .
+    just check-types

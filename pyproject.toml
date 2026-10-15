@@ -40,3 +40,4 @@ ignore = ["E501", "SIM105", "N818", "RUF001", "RUF002", "RUF022"]
 typeCheckingMode = "standard"
 pythonVersion = "3.13"
 include = ["constants.py", "scripts", "tests"]
+extraPaths = ["scripts"]
